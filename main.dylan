@@ -1,12 +1,28 @@
 Module: web-ide-backend
 
+define table *type-mapping* = 
+  { <library-object> => "library",
+    <module-object> => "module",
+    <class-object> => "class",
+    <function-object> => "function",
+    <generic-function-object> => "generic-function",
+    <method-object> => "method",
+    <variable-object> => "variable",
+    <constant-object> => "constant" };
+
+define function callback-handler (#rest args)
+  log-debug("%=\n", args);
+end function;
+
 define function open-project-database (project :: <project-object>)
-  open-project-compiler-database(project);
+  open-project-compiler-database(project,
+                                 warning-callback: callback-handler,
+                                 error-handler: callback-handler);
   parse-project-source(project);
 end function;
 
 define function all-library-names ()
- let names = make(<deque>);
+  let names = make(<deque>);
   local method collect-project
             (dir :: <pathname>, name :: <string>, type :: <file-type>)
           if (type == #"file")
@@ -20,7 +36,7 @@ define function all-library-names ()
       do-directory(collect-project, path);
     end;
   end;
-  names;
+  remove-duplicates!(names, test: \=);
 end function;
 
 define function library-names ()
@@ -82,12 +98,13 @@ define function module-used-modules-names (#key library-name, module-name)
       end, used-modules);
 end function;
 
-define function module-definitions-names (#key library-name, module-name)
+define function module-definitions-handler (#key library-name, module-name)
   let (project, library, module) = find-library/module(library-name, module-name);
   let definitions = module-definitions(project, module, imported?: #f);
   map(method (definition)
         let home-name = environment-object-home-name(project, definition);
-        environment-object-primitive-name(project, home-name);
+        table("name" => environment-object-primitive-name(project, home-name),
+              "type" => *type-mapping*[object-class(definition)]);
       end, definitions);
 end function;
 
@@ -102,8 +119,8 @@ end function;
 
 
 define function configuration ()
-  table("" => "package",
-        "package" => "module",
+  table("" => "library",
+        "library" => "module",
         "module" => "symbol")
 end function;
 
@@ -115,6 +132,9 @@ define function json-handler (function)
 end function;
 
 define function start ()
+  // configure environment
+  *check-source-record-date?* := #f;
+
   // configure and start server
   let server = make(<http-server>,
                     listeners: list("0.0.0.0:8080"));
@@ -140,7 +160,7 @@ define function start ()
   add("/api/used-modules/{library-name}/{module-name}",
       module-used-modules-names);
   add("/api/module-definitions/{library-name}/{module-name}",
-      module-definitions-names);
+      module-definitions-handler);
 
   add("/api/symbol/{library-name}/{module-name}/{symbol-name}",
       symbol-information);

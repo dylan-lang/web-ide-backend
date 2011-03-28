@@ -8,6 +8,7 @@ define library web-ide-backend
   use registry-projects;
   use environment-commands;
   use environment-protocols;
+  use source-records;
   use koala;
   use json;
 end;
@@ -27,6 +28,8 @@ define module web-ide-backend
     exclude: { application-filename,
 	       application-arguments,
 	       run-application };
+  use source-records;
+  use source-records-implementation;
   use koala;
   use json;
 end;
