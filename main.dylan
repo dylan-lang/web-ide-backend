@@ -257,17 +257,48 @@ end function;
 //                                       module: module);
 //   let subclasses = make(<deque>);
 //   do-all-subclasses(method (subclass)
-//                       push(subclasses, object-name(project, subclass));
-//                     end, 
+//                       push(subclasses,
+//                            table("name" => object-name(project, subclass),
+//                                  "parents" => object-parents(project, subclass)));
+//                     end method, 
 //                     project, class);
-//   table("parents" => vector(library-name, module-name),
+//   table("parents" => #f,
 //         "objects" => subclasses);
 // end function;
 
-// TODO:
-define function direct-methods () end;
-define function all-methods () end;
+define function direct-methods (#key library-name, module-name, class-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let class = find-environment-object(project, class-name,
+                                      library: library,
+                                      module: module);
+  let methods = make(<deque>);
+  do-direct-methods(method (method*)
+                      push(methods,
+                           table("name" => object-name(project, method*),
+                                 "parents" => object-parents(project, method*)));
+                    end method, 
+                    project, class);
+  table("parents" => #f,
+        "objects" => methods);
+end function;
 
+define function all-methods (#key library-name, module-name, class-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let class = find-environment-object(project, class-name,
+                                      library: library,
+                                      module: module);
+  let methods = make(<deque>);
+  do-all-methods(method (method-class, method*)
+                   push(methods,
+                        table("name" => object-name(project, method*),
+                              "parents" => object-parents(project, method*)));
+                 end method, 
+                 project, class);
+  table("parents" => #f,
+        "objects" => methods);
+end function;
 
 // TODO:
 define function configuration ()
