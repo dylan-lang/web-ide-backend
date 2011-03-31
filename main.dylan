@@ -112,8 +112,15 @@ end function;
 define function used-modules (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  table("parents" => vector(library-name),
-        "objects" => map(curry(object-name, project),
+  table("parents" => #f,
+        "objects" => map(method (used-module)
+                           let used-module-name = 
+                             environment-object-home-name(project, used-module);
+                           let used-module-library = 
+                             name-namespace(project, used-module-name);
+                           table("name" => object-name(project, used-module),
+                                 "parents" => vector(object-name(project, used-module-library)))
+                         end method,
                          source-form-used-definitions(project, module)));
 end function;
 
@@ -158,6 +165,23 @@ define function direct-slots (#key library-name, module-name, class-name)
         "objects" => slots);
 end function;
 
+define function object-parents (project, object)
+  let parents = make(<deque>);
+  let parent = #f;
+  for (current = object then parent, while: current)
+    let home-name = 
+      environment-object-home-name(project, current);
+    if (home-name)
+      parent := name-namespace(project, home-name);
+      parents := add!(parents, object-name(project, parent));
+    else
+      parent := #f;
+    end if;
+  finally
+    parents;
+  end for;
+end function;
+
 define function all-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
@@ -167,11 +191,11 @@ define function all-slots (#key library-name, module-name, class-name)
   let slots = make(<deque>);
   do-all-slots(method (slot-object)
                  let getter = slot-getter(project, slot-object);
-                 let name = object-name(project, getter);
-                 push(slots, name);
-               end, 
+                 push(slots, table("name" => object-name(project, getter),
+                                   "parents" => object-parents(project, getter)))
+               end method, 
                project, class);
-  table("parents" => vector(library-name, module-name, class-name),
+  table("parents" => #f,
         "objects" => slots);
 end function;
 
@@ -198,10 +222,12 @@ define function all-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-all-superclasses(method (superclass)
-                        push(superclasses, object-name(project, superclass));
-                      end, 
+                        push(superclasses, 
+                             table("name" => object-name(project, superclass),
+                                   "parents" => object-parents(project, superclass)));
+                      end method, 
                       project, class);
-  table("parents" => vector(library-name, module-name),
+  table("parents" => #f,
         "objects" => superclasses);
 end function;
 
@@ -213,10 +239,12 @@ define function direct-subclasses (#key library-name, module-name, class-name)
                                       module: module);
   let subclasses = make(<deque>);
   do-direct-subclasses(method (subclass)
-                         push(subclasses, object-name(project, subclass));
-                       end, 
+                         push(subclasses,
+                              table("name" => object-name(project, subclass),
+                                    "parents" => object-parents(project, subclass)));
+                       end method, 
                        project, class);
-  table("parents" => vector(library-name, module-name),
+  table("parents" => #f,
         "objects" => subclasses);
 end function;
 
