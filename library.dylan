@@ -14,7 +14,8 @@ define library web-ide-backend
 end;
 
 define module web-ide-backend
-  use common-dylan;
+  use common-dylan, 
+    exclude: { direct-superclasses, all-superclasses, direct-subclasses };
   use standard-io;
   use file-system;
   use print;
