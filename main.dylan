@@ -300,6 +300,33 @@ define function all-methods (#key library-name, module-name, class-name)
         "objects" => methods);
 end function;
 
+define function methods (#key library-name, module-name, generic-function-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let generic-function = find-environment-object(project, generic-function-name,
+                                                 library: library,
+                                                 module: module);
+  let methods = make(<deque>);
+  do-generic-function-methods(method (method*)
+                                push(methods,
+                                     table("name" => object-name(project, method*),
+                                           "parents" => object-parents(project, method*)));
+                              end method,
+                              project, generic-function);
+  table("parents" => #f,
+        "objects" => methods);
+end function;
+
+define function source (#key library-name, module-name, object-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let object = find-environment-object(project, object-name,
+                                       library: library,
+                                       module: module);
+  environment-object-source(project, object);
+end function;
+
+
 // TODO:
 define function configuration ()
   table("" => "library",
@@ -357,15 +384,17 @@ define function start ()
   add("/api/all-slots/{library-name}/{module-name}/{class-name}",
       all-slots);
 
+  add("/api/methods/{library-name}/{module-name}/{generic-function-name}",
+      methods);
+
+  add("/api/source/{library-name}/{module-name}/{object-name}",
+      source);
+
   // TODO:
   add("/configuration", configuration);
 
   // add("/api/symbol/{library-name}/{module-name}/{symbol-name}",
   //     symbol-information);
-
-  // add("/api/methods/{library-name}/{module-name}/{function-name}",
-  //   generic-function-methods);
-  //  => generic-function-object-methods(project, generic-function);
 
   // /search/{types+}/{term} => [{module: 'common-dylan'}, ...]
 
