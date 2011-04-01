@@ -35,10 +35,8 @@ end function;
 
 define variable *libraries* = #f;
 
-define function all-library-names ()
-  if (*libraries*)
-    *libraries*
-  else
+define function library-names ()
+  unless (*libraries*)
     let names = make(<deque>);
     local method collect-project
               (dir :: <pathname>, name :: <string>, type :: <file-type>)
@@ -55,23 +53,9 @@ define function all-library-names ()
     end for;
     remove-duplicates!(names, test: \=);
     *libraries* := names;
-  end if;
-end function;
-
-define function library-names ()
-  let prefix = get-query-value("prefix");
-  let names = sort!(all-library-names());
+  end unless;
   table("parents" => #(),
-        "objects" => if (prefix)
-                       choose(method (name)
-                                copy-sequence(name, end: min(size(name), 
-                                                             size(prefix)))
-                                  = prefix
-                              end,
-                              names);
-                     else
-                       names;
-                     end if);
+        "objects" => *libraries*);
 end function;
 
 define function find-library/module (library-name, module-name)
@@ -341,6 +325,34 @@ define function json-handler (function)
   end method;
 end function;
 
+  define function filtered (function)
+    method (#rest arguments)
+      let prefix = get-query-value("prefix");
+      let result = apply(function, arguments);
+      if (prefix)
+        result["objects"] := choose(method (object)
+                                      let name = if (instance?(object, <string>))
+                                                   object
+                                                 else
+                                                   object["name"]
+                                                 end if;
+                                      copy-sequence(name, end: min(size(name), 
+                                                                   size(prefix)))
+                                        = prefix
+                                    end method,
+                                    sort(result["objects"],
+                                         test: method (a, b)
+                                                 if (instance?(a, <string>))
+                                                   a < b
+                                                 else
+                                                   a["name"] < b["name"]
+                                                 end if;
+                                               end method));
+      end if;
+      result;
+    end method;
+end function;
+
 define function start ()
   // configure environment
   *check-source-record-date?* := #f;
@@ -349,43 +361,50 @@ define function start ()
   let server = make(<http-server>,
                     listeners: list("0.0.0.0:8080"));
 
-  local method add (url, function)
+  local method add (url, function, #key filtered?)
+          let function = if (filtered?)
+                           filtered(function)
+                         else
+                           function
+                         end if;
           add-resource(server, url,
                        function-resource(json-handler(function)));
         end;
 
-  add("/api/libraries", library-names);
-  add("/api/modules/{library-name}", modules);
+  add("/api/libraries", 
+      library-names, filtered?: #t);
+  add("/api/modules/{library-name}", 
+      modules, filtered?: #t);
   add("/api/defined-modules/{library-name}", 
-      defined-modules);
+      defined-modules, filtered?: #t);
   add("/api/used-libraries/{library-name}", 
-      used-libraries);
+      used-libraries, filtered?: #t);
 
   add("/api/used-modules/{library-name}/{module-name}",
-      used-modules);
+      used-modules, filtered?: #t);
   add("/api/definitions/{library-name}/{module-name}",
-      definitions);
+      definitions, filtered?: #t);
 
   add("/api/direct-subclasses/{library-name}/{module-name}/{class-name}",
-      direct-subclasses);
+      direct-subclasses, filtered?: #t);
 // TODO: not supported by environment API
 //  add("/api/all-subclasses/{library-name}/{module-name}/{class-name}",
-//      all-subclasses);
+//      all-subclasses, filtered?: #t);
   add("/api/direct-superclasses/{library-name}/{module-name}/{class-name}",
-      direct-superclasses);
+      direct-superclasses, filtered?: #t);
   add("/api/all-superclasses/{library-name}/{module-name}/{class-name}",
-      all-superclasses);
+      all-superclasses, filtered?: #t);
   add("/api/direct-methods/{library-name}/{module-name}/{class-name}",
-      direct-methods);
+      direct-methods, filtered?: #t);
   add("/api/all-methods/{library-name}/{module-name}/{class-name}",
-      all-methods);
+      all-methods, filtered?: #t);
   add("/api/direct-slots/{library-name}/{module-name}/{class-name}",
-      direct-slots);
+      direct-slots, filtered?: #t);
   add("/api/all-slots/{library-name}/{module-name}/{class-name}",
-      all-slots);
+      all-slots, filtered?: #t);
 
   add("/api/methods/{library-name}/{module-name}/{generic-function-name}",
-      methods);
+      methods, filtered?: #t);
 
   add("/api/source/{library-name}/{module-name}/{object-name}",
       source);
