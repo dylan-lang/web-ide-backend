@@ -10,7 +10,11 @@ define table *type-mapping* =
     <generic-function-object> => "generic-function",
     <method-object> => "method",
     <variable-object> => "variable",
-    <constant-object> => "constant" };
+    <global-variable-object> => "global-variable",
+    <thread-variable-object> => "thread-variable",   
+    <constant-object> => "constant",
+    <macro-object> => "macro", 
+    <domain-object> => "domain" };
 
 define function object-name (project, object)
   let name = environment-object-home-name(project, object);
@@ -284,21 +288,66 @@ define function all-methods (#key library-name, module-name, class-name)
         "objects" => methods);
 end function;
 
+define function method-details (project :: <project-object>, method* :: <method-object>)
+ => (result :: <table>);
+  table("specializers" => 
+          map(curry(object-name, project), 
+              method-specializers(project, method*)));
+end function;
+
+define function parameter-details (project :: <project-object>, parameter :: <parameter>) 
+ => (result :: <table>);
+  table("name" => parameter-name(parameter),
+        "type" => object-name(project, parameter-type(parameter)));
+end function;
+
+define function function-details (project :: <project-object>, function :: <function-object>)
+ => (result :: <table>);
+  let details = curry(parameter-details, project);
+  let (required :: <parameters>,
+       rest :: false-or(<parameter>),
+       keys :: <optional-parameters>,
+       all-keys? :: <boolean>,
+       next :: false-or(<parameter>),
+       values :: <parameters>,
+       rest-value :: false-or(<parameter>)) 
+    = function-parameters(project, function);
+  table("required" => map(details, required),
+        "rest" => rest & details(rest),
+        "keys" => map(method (parameter)
+                        map-into(details(parameter), 
+                                 identity,
+                                 table("keyword" => parameter-keyword(parameter),
+                                       "default" => 
+                                         format-to-string("%=", 
+                                                          parameter-default-value(parameter))));
+                      end, keys),
+        "all-keys?" => all-keys?,
+        "next" => next & details(next),
+        "values" => map(details, values),
+        "rest-value" => rest-value & details(rest-value));
+end function;
+
 define function methods (#key library-name, module-name, generic-function-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
   let generic-function = find-environment-object(project, generic-function-name,
                                                  library: library,
                                                  module: module);
-  let methods = make(<deque>);
-  do-generic-function-methods(method (method*)
-                                push(methods,
-                                     table("name" => object-name(project, method*),
-                                           "parents" => object-parents(project, method*)));
-                              end method,
-                              project, generic-function);
-  table("parents" => #f,
-        "objects" => methods);
+  if (generic-function)
+    let methods = make(<deque>);
+    do-generic-function-methods(method (method*)
+                                  push(methods,
+                                       table("name" => object-name(project, method*),
+                                             "parents" => object-parents(project, method*),
+                                             "details" => map-into(function-details(project, method*),
+                                                                   identity,
+                                                                   method-details(project, method*))));
+                                end method,
+                                project, generic-function);
+    table("parents" => #f,
+          "objects" => methods);
+  end if;
 end function;
 
 define function source (#key library-name, module-name, object-name)
@@ -359,7 +408,8 @@ define function start ()
 
   // configure and start server
   let server = make(<http-server>,
-                    listeners: list("0.0.0.0:8080"));
+                    listeners: list("0.0.0.0:8080"),
+                    debug: #t);
 
   local method add (url, function, #key filtered?)
           let function = if (filtered?)
