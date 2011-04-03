@@ -26,12 +26,15 @@ define function object-name (project, object)
   end if;
 end function;
 
-define function object-information (project :: <project-object>, object :: <object>)
+define generic object-information (project :: <project-object>, object :: <object>)
+ => (result :: <table>);
+
+define method object-information (project :: <project-object>, object :: <object>)
  => (result :: <table>);
   table("name" => object-name(project, object),
         "parents" => object-parents(project, object),
         "details" => object-details(project, object));
-end function;
+end method;
 
 define function callback-handler (#rest args)
   log-debug("%=\n", args);
@@ -144,6 +147,14 @@ end function;
 //   // TODO:
 // end function;
 
+define method object-information (project :: <project-object>, slot :: <slot-object>)
+ => (result :: <table>);
+  let getter = slot-getter(project, slot);
+  table("name" => object-name(project, getter),
+        "details" => object-details(project, slot),
+        "parents" => object-parents(project, getter));
+end method;
+
 define function direct-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
@@ -151,15 +162,32 @@ define function direct-slots (#key library-name, module-name, class-name)
                                       library: library,
                                       module: module);
   let slots = make(<deque>);
-  do-direct-slots(method (slot-object)
-                    let getter = slot-getter(project, slot-object);
-                    let name = object-name(project, getter);
-                    push(slots, name);
+  do-direct-slots(method (slot)
+                    let information = object-information(project, slot);
+                    // already specicified globally
+                    remove-key!(information, "parents");
+                    push(slots, information)
                   end,
                   project, class);
   table("parents" => vector(library-name, module-name),
         "objects" => slots);
 end function;
+
+define function all-slots (#key library-name, module-name, class-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let class = find-environment-object(project, class-name,
+                                      library: library,
+                                      module: module);
+  let slots = make(<deque>);
+  do-all-slots(method (slot)
+                 push(slots, object-information(project, slot));
+               end,
+               project, class);
+  table("parents" => #f,
+        "objects" => slots);
+end function;
+
 
 define function object-parents (project, object)
   let parents = make(<deque>);
@@ -176,22 +204,6 @@ define function object-parents (project, object)
   finally
     parents;
   end for;
-end function;
-
-define function all-slots (#key library-name, module-name, class-name)
-  let (project, library, module) =
-    find-library/module(library-name, module-name);
-  let class = find-environment-object(project, class-name,
-                                      library: library,
-                                      module: module);
-  let slots = make(<deque>);
-  do-all-slots(method (slot-object)
-                 let getter = slot-getter(project, slot-object);
-                 push(slots, object-information(project, getter));
-               end method,
-               project, class);
-  table("parents" => #f,
-        "objects" => slots);
 end function;
 
 define function direct-superclasses (#key library-name, module-name, class-name)
@@ -317,6 +329,12 @@ define method object-details
  => (result :: false-or(<table>));
   table("value" => format-to-string("%s", variable-value(project, variable)),
         "type" => object-name(project, variable-type(project, variable)));
+end method;
+
+define method object-details
+    (project :: <project-object>, slot :: <slot-object>)
+ => (result :: false-or(<table>));
+  table("type" => object-name(project, slot-type(project, slot)));
 end method;
 
 define function direct-methods (#key library-name, module-name, class-name)
