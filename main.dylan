@@ -2,7 +2,7 @@ Module: web-ide-backend
 
 // See dylan/fundev/sources/environment/protocols/
 
-define table *type-mapping* = 
+define table *type-mapping* =
   { <library-object> => "library",
     <module-object> => "module",
     <class-object> => "class",
@@ -11,9 +11,9 @@ define table *type-mapping* =
     <method-object> => "method",
     <variable-object> => "variable",
     <global-variable-object> => "global-variable",
-    <thread-variable-object> => "thread-variable",   
+    <thread-variable-object> => "thread-variable",
     <constant-object> => "constant",
-    <macro-object> => "macro", 
+    <macro-object> => "macro",
     <domain-object> => "domain" };
 
 define function object-name (project, object)
@@ -21,9 +21,16 @@ define function object-name (project, object)
   if (name)
     environment-object-primitive-name(project, name)
   else
-    environment-object-display-name(project, object, #f, 
+    environment-object-display-name(project, object, #f,
                                     qualify-names?: #f)
   end if;
+end function;
+
+define function object-information (project :: <project-object>, object :: <object>)
+ => (result :: <table>);
+  table("name" => object-name(project, object),
+        "parents" => object-parents(project, object),
+        "details" => object-details(project, object));
 end function;
 
 define function callback-handler (#rest args)
@@ -86,7 +93,7 @@ define function defined-modules (#key library-name)
   let (project, library) = find-library/module(library-name, #f);
   table("parents" => vector(library-name),
         "objects" => map(curry(object-name, project),
-                         library-modules(project, library, 
+                         library-modules(project, library,
                                          imported?: #f)));
 end function;
 
@@ -102,9 +109,9 @@ define function used-modules (#key library-name, module-name)
     find-library/module(library-name, module-name);
   table("parents" => #f,
         "objects" => map(method (used-module)
-                           let used-module-name = 
+                           let used-module-name =
                              environment-object-home-name(project, used-module);
-                           let used-module-library = 
+                           let used-module-library =
                              name-namespace(project, used-module-name);
                            table("name" => object-name(project, used-module),
                                  "parents" => vector(object-name(project, used-module-library)))
@@ -115,12 +122,13 @@ end function;
 define function definitions (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  let definitions = module-definitions(project, module, 
+  let definitions = module-definitions(project, module,
                                        imported?: #f);
-  let definitions = 
+  let definitions =
     map(method (definition)
           table("name" => object-name(project, definition),
-                "type" => *type-mapping*[object-class(definition)]);
+                "type" => *type-mapping*[object-class(definition)],
+                "details" => object-details(project, definition));
         end, definitions);
   table("parents" => vector(library-name, module-name),
         "objects" => definitions);
@@ -147,7 +155,7 @@ define function direct-slots (#key library-name, module-name, class-name)
                     let getter = slot-getter(project, slot-object);
                     let name = object-name(project, getter);
                     push(slots, name);
-                  end, 
+                  end,
                   project, class);
   table("parents" => vector(library-name, module-name, class-name),
         "objects" => slots);
@@ -157,7 +165,7 @@ define function object-parents (project, object)
   let parents = make(<deque>);
   let parent = #f;
   for (current = object then parent, while: current)
-    let home-name = 
+    let home-name =
       environment-object-home-name(project, current);
     if (home-name)
       parent := name-namespace(project, home-name);
@@ -179,9 +187,8 @@ define function all-slots (#key library-name, module-name, class-name)
   let slots = make(<deque>);
   do-all-slots(method (slot-object)
                  let getter = slot-getter(project, slot-object);
-                 push(slots, table("name" => object-name(project, getter),
-                                   "parents" => object-parents(project, getter)))
-               end method, 
+                 push(slots, object-information(project, getter));
+               end method,
                project, class);
   table("parents" => #f,
         "objects" => slots);
@@ -196,7 +203,7 @@ define function direct-superclasses (#key library-name, module-name, class-name)
   let superclasses = make(<deque>);
   do-direct-superclasses(method (superclass)
                            push(superclasses, object-name(project, superclass));
-                         end, 
+                         end,
                          project, class);
   table("parents" => vector(library-name, module-name),
         "objects" => superclasses);
@@ -210,10 +217,8 @@ define function all-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-all-superclasses(method (superclass)
-                        push(superclasses, 
-                             table("name" => object-name(project, superclass),
-                                   "parents" => object-parents(project, superclass)));
-                      end method, 
+                        push(superclasses, object-information(project, superclass));
+                      end method,
                       project, class);
   table("parents" => #f,
         "objects" => superclasses);
@@ -227,10 +232,8 @@ define function direct-subclasses (#key library-name, module-name, class-name)
                                       module: module);
   let subclasses = make(<deque>);
   do-direct-subclasses(method (subclass)
-                         push(subclasses,
-                              table("name" => object-name(project, subclass),
-                                    "parents" => object-parents(project, subclass)));
-                       end method, 
+                         push(subclasses, object-information(project, subclass));
+                       end method,
                        project, class);
   table("parents" => #f,
         "objects" => subclasses);
@@ -245,16 +248,79 @@ end function;
 //                                       module: module);
 //   let subclasses = make(<deque>);
 //   do-all-subclasses(method (subclass)
-//                       push(subclasses,
-//                            table("name" => object-name(project, subclass),
-//                                  "parents" => object-parents(project, subclass)));
-//                     end method, 
+//                       push(subclasses, object-information(project, subclass));
+//                     end method,
 //                     project, class);
 //   table("parents" => #f,
 //         "objects" => subclasses);
 // end function;
 
+define generic object-details
+    (project :: <project-object>, object :: <object>)
+ => (result :: false-or(<table>));
+
+define method object-details (project :: <project-object>, object :: <object>)
+ => (result :: false-or(<table>));
+  #f;
+end method;
+
+define method object-details
+    (project :: <project-object>, method* :: <method-object>)
+ => (result :: false-or(<table>));
+  map-into(next-method(),
+           identity,
+           table("specializers" =>
+                   map(curry(object-name, project),
+                       method-specializers(project, method*))));
+end method;
+
+define method object-details
+    (project :: <project-object>, parameter :: <parameter>)
+ => (result :: false-or(<table>));
+  table("name" => parameter-name(parameter),
+        "type" => object-name(project, parameter-type(parameter)));
+end method;
+
+define method object-details
+    (project :: <project-object>, parameter :: <optional-parameter>)
+ => (result :: false-or(<table>));
+  map-into(next-method(),
+           identity,
+           table("keyword" => parameter-keyword(parameter),
+                 "default" =>
+                   format-to-string("%s", parameter-default-value(parameter))));
+end method;
+
+define method object-details
+    (project :: <project-object>, function :: <dylan-function-object>)
+ => (result :: false-or(<table>));
+  let details = curry(object-details, project);
+  let (required :: <parameters>,
+       rest :: false-or(<parameter>),
+       keys :: <optional-parameters>,
+       all-keys? :: <boolean>,
+       next :: false-or(<parameter>),
+       values :: <parameters>,
+       rest-value :: false-or(<parameter>))
+    = function-parameters(project, function);
+  table("required" => map(details, required),
+        "rest" => rest & details(rest),
+        "keys" => map(details, keys),
+        "all-keys?" => all-keys?,
+        "next" => next & details(next),
+        "values" => map(details, values),
+        "rest-value" => rest-value & details(rest-value));
+end method;
+
+define method object-details
+    (project :: <project-object>, variable :: <variable-object>)
+ => (result :: false-or(<table>));
+  table("value" => format-to-string("%s", variable-value(project, variable)),
+        "type" => object-name(project, variable-type(project, variable)));
+end method;
+
 define function direct-methods (#key library-name, module-name, class-name)
+ => (result :: <table>);
   let (project, library, module) =
     find-library/module(library-name, module-name);
   let class = find-environment-object(project, class-name,
@@ -262,10 +328,8 @@ define function direct-methods (#key library-name, module-name, class-name)
                                       module: module);
   let methods = make(<deque>);
   do-direct-methods(method (method*)
-                      push(methods,
-                           table("name" => object-name(project, method*),
-                                 "parents" => object-parents(project, method*)));
-                    end method, 
+                      push(methods, object-information(project, method*));
+                    end method,
                     project, class);
   table("parents" => #f,
         "objects" => methods);
@@ -279,53 +343,11 @@ define function all-methods (#key library-name, module-name, class-name)
                                       module: module);
   let methods = make(<deque>);
   do-all-methods(method (method-class, method*)
-                   push(methods,
-                        table("name" => object-name(project, method*),
-                              "parents" => object-parents(project, method*)));
-                 end method, 
+                   push(methods, object-information(project, method*));
+                 end method,
                  project, class);
   table("parents" => #f,
         "objects" => methods);
-end function;
-
-define function method-details (project :: <project-object>, method* :: <method-object>)
- => (result :: <table>);
-  table("specializers" => 
-          map(curry(object-name, project), 
-              method-specializers(project, method*)));
-end function;
-
-define function parameter-details (project :: <project-object>, parameter :: <parameter>) 
- => (result :: <table>);
-  table("name" => parameter-name(parameter),
-        "type" => object-name(project, parameter-type(parameter)));
-end function;
-
-define function function-details (project :: <project-object>, function :: <function-object>)
- => (result :: <table>);
-  let details = curry(parameter-details, project);
-  let (required :: <parameters>,
-       rest :: false-or(<parameter>),
-       keys :: <optional-parameters>,
-       all-keys? :: <boolean>,
-       next :: false-or(<parameter>),
-       values :: <parameters>,
-       rest-value :: false-or(<parameter>)) 
-    = function-parameters(project, function);
-  table("required" => map(details, required),
-        "rest" => rest & details(rest),
-        "keys" => map(method (parameter)
-                        map-into(details(parameter), 
-                                 identity,
-                                 table("keyword" => parameter-keyword(parameter),
-                                       "default" => 
-                                         format-to-string("%=", 
-                                                          parameter-default-value(parameter))));
-                      end, keys),
-        "all-keys?" => all-keys?,
-        "next" => next & details(next),
-        "values" => map(details, values),
-        "rest-value" => rest-value & details(rest-value));
 end function;
 
 define function methods (#key library-name, module-name, generic-function-name)
@@ -337,12 +359,7 @@ define function methods (#key library-name, module-name, generic-function-name)
   if (generic-function)
     let methods = make(<deque>);
     do-generic-function-methods(method (method*)
-                                  push(methods,
-                                       table("name" => object-name(project, method*),
-                                             "parents" => object-parents(project, method*),
-                                             "details" => map-into(function-details(project, method*),
-                                                                   identity,
-                                                                   method-details(project, method*))));
+                                  push(methods, object-information(project, method*));
                                 end method,
                                 project, generic-function);
     table("parents" => #f,
@@ -374,32 +391,33 @@ define function json-handler (function)
   end method;
 end function;
 
-  define function filtered (function)
-    method (#rest arguments)
-      let prefix = get-query-value("prefix");
-      let result = apply(function, arguments);
-      if (prefix)
-        result["objects"] := choose(method (object)
-                                      let name = if (instance?(object, <string>))
-                                                   object
-                                                 else
-                                                   object["name"]
-                                                 end if;
-                                      copy-sequence(name, end: min(size(name), 
-                                                                   size(prefix)))
-                                        = prefix
-                                    end method,
-                                    sort(result["objects"],
-                                         test: method (a, b)
-                                                 if (instance?(a, <string>))
-                                                   a < b
-                                                 else
-                                                   a["name"] < b["name"]
-                                                 end if;
-                                               end method));
-      end if;
-      result;
-    end method;
+define function filtered (function)
+  local method compare (a, b)
+          if (instance?(a, <string>))
+            a < b
+          else
+            a["name"] < b["name"]
+          end if;
+        end method;
+
+  method (#rest arguments)
+    let prefix = get-query-value("prefix");
+    let result = apply(function, arguments);
+    if (prefix)
+      result["objects"] := choose(method (object)
+                                    let name = if (instance?(object, <string>))
+                                                 object
+                                               else
+                                                 object["name"]
+                                               end if;
+                                    copy-sequence(name, end: min(size(name),
+                                                                 size(prefix)))
+                                      = prefix
+                                  end method,
+                                  sort(result["objects"], test: compare));
+    end if;
+    result;
+  end method;
 end function;
 
 define function start ()
@@ -421,13 +439,13 @@ define function start ()
                        function-resource(json-handler(function)));
         end;
 
-  add("/api/libraries", 
+  add("/api/libraries",
       library-names, filtered?: #t);
-  add("/api/modules/{library-name}", 
+  add("/api/modules/{library-name}",
       modules, filtered?: #t);
-  add("/api/defined-modules/{library-name}", 
+  add("/api/defined-modules/{library-name}",
       defined-modules, filtered?: #t);
-  add("/api/used-libraries/{library-name}", 
+  add("/api/used-libraries/{library-name}",
       used-libraries, filtered?: #t);
 
   add("/api/used-modules/{library-name}/{module-name}",
@@ -466,23 +484,6 @@ define function start ()
   //     symbol-information);
 
   // /search/{types+}/{term} => [{module: 'common-dylan'}, ...]
-
-  // <dylan-function-object>
-  // => function-parameters
-  //    (server :: <server>, function :: <dylan-function-object>)
-  //     => (required :: <parameters>,
-  //         rest :: false-or(<parameter>),
-  //         keys :: <optional-parameters>,
-  //         all-keys? :: <boolean>,
-  //         next :: false-or(<parameter>),
-  //         values :: <parameters>,
-  //         rest-value :: false-or(<parameter>));
-  // <method-object>
-  // => method-specializers
-
-  // <variable-object>
-  // => variable-type
-  // => variable-value
 
   start-server(server);
 end function;
