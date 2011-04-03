@@ -157,7 +157,7 @@ define function direct-slots (#key library-name, module-name, class-name)
                     push(slots, name);
                   end,
                   project, class);
-  table("parents" => vector(library-name, module-name, class-name),
+  table("parents" => vector(library-name, module-name),
         "objects" => slots);
 end function;
 
