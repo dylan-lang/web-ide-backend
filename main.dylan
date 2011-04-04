@@ -2,20 +2,61 @@ Module: web-ide-backend
 
 // See dylan/fundev/sources/environment/protocols/
 
-define table *type-mapping* =
-  { <library-object> => "library",
-    <module-object> => "module",
-    <class-object> => "class",
-    <function-object> => "function",
-    <generic-function-object> => "generic-function",
-    <method-object> => "method",
-    <variable-object> => "variable",
-    <global-variable-object> => "global-variable",
-    <thread-variable-object> => "thread-variable",
-    <constant-object> => "constant",
-    <slot-object> => "slot",
-    <macro-object> => "macro",
-    <domain-object> => "domain" };
+define method object-type (object :: <library-object>)
+ "library"
+end;
+
+define method object-type (object :: <module-object>)
+ "module"
+end;
+
+define method object-type (object :: <class-object>)
+  "class"
+end;
+
+define method object-type (object :: <function-object>)
+  "function"
+end;
+
+define method object-type (object :: <generic-function-object>)
+  "generic-function"
+end;
+
+define method object-type (object :: <method-object>)
+  "method"
+end;
+
+define method object-type (object :: <variable-object>)
+  "variable"
+end;
+
+define method object-type (object :: <global-variable-object>)
+  "global-variable"
+end;
+
+define method object-type (object :: <thread-variable-object>)
+  "thread-variable"
+end;
+
+define method object-type (object :: <constant-object>)
+  "constant"
+end;
+
+define method object-type (object :: <slot-object>)
+  "slot"
+end;
+
+define method object-type (object :: <macro-object>)
+  "macro"
+end;
+
+define method object-type (object :: <domain-object>)
+  "domain"
+end;
+
+define method object-type (object :: <complex-type-expression-object>)
+  "complex-type-expression"
+end method;
 
 define function object-name (project, object)
   let name = environment-object-home-name(project, object);
@@ -33,6 +74,7 @@ define generic object-information (project :: <project-object>, object :: <objec
 define method object-information (project :: <project-object>, object :: <object>)
  => (result :: <table>);
   table("name" => object-name(project, object),
+        "type" => object-type(object),
         "parents" => object-parents(project, object),
         "details" => object-details(project, object));
 end method;
@@ -127,14 +169,9 @@ define function definitions (#key library-name, module-name)
     find-library/module(library-name, module-name);
   let definitions = module-definitions(project, module,
                                        imported?: #f);
-  let definitions =
-    map(method (definition)
-          table("name" => object-name(project, definition),
-                "type" => *type-mapping*[object-class(definition)],
-                "details" => object-details(project, definition));
-        end, definitions);
   table("parents" => vector(library-name, module-name),
-        "objects" => definitions);
+        "objects" => map(curry(object-information, project),
+                         definitions));
 end function;
 
 // TODO:
