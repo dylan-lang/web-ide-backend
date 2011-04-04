@@ -13,6 +13,7 @@ define table *type-mapping* =
     <global-variable-object> => "global-variable",
     <thread-variable-object> => "thread-variable",
     <constant-object> => "constant",
+    <slot-object> => "slot",
     <macro-object> => "macro",
     <domain-object> => "domain" };
 
