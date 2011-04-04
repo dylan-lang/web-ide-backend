@@ -66,8 +66,7 @@ define function library-names ()
         do-directory(collect-project, path);
       end;
     end for;
-    remove-duplicates!(names, test: \=);
-    *libraries* := names;
+    *libraries* := remove-duplicates!(names, test: \=);
   end unless;
   table("parents" => #(),
         "objects" => *libraries*);
@@ -422,6 +421,7 @@ define function filtered (function)
   method (#rest arguments)
     let prefix = get-query-value("prefix");
     let result = apply(function, arguments);
+    result["objects"] := sort(result["objects"], test: compare);
     if (prefix)
       result["objects"] := choose(method (object)
                                     let name = if (instance?(object, <string>))
@@ -433,7 +433,7 @@ define function filtered (function)
                                                                  size(prefix)))
                                       = prefix
                                   end method,
-                                  sort(result["objects"], test: compare));
+                                  result["objects"]);
     end if;
     result;
   end method;
