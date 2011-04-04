@@ -187,9 +187,9 @@ end function;
 define method object-information (project :: <project-object>, slot :: <slot-object>)
  => (result :: <table>);
   let getter = slot-getter(project, slot);
-  table("name" => object-name(project, getter),
-        "details" => object-details(project, slot),
-        "parents" => object-parents(project, getter));
+  let information = next-method();
+  information["name"] := object-name(project, getter);
+  information["parents"] := object-parents(project, getter);
 end method;
 
 define function direct-slots (#key library-name, module-name, class-name)
@@ -251,7 +251,11 @@ define function direct-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-direct-superclasses(method (superclass)
-                           push(superclasses, object-name(project, superclass));
+                           let information = 
+                             object-information(project, superclass);
+                           // already specicified globally
+                           remove-key!(information, "parents");
+                           push(superclasses, information);
                          end,
                          project, class);
   table("parents" => vector(library-name, module-name),
@@ -266,7 +270,8 @@ define function all-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-all-superclasses(method (superclass)
-                        push(superclasses, object-information(project, superclass));
+                        push(superclasses, 
+                             object-information(project, superclass));
                       end method,
                       project, class);
   table("parents" => #f,
@@ -281,7 +286,8 @@ define function direct-subclasses (#key library-name, module-name, class-name)
                                       module: module);
   let subclasses = make(<deque>);
   do-direct-subclasses(method (subclass)
-                         push(subclasses, object-information(project, subclass));
+                         push(subclasses, 
+                              object-information(project, subclass));
                        end method,
                        project, class);
   table("parents" => #f,
@@ -319,7 +325,7 @@ define method object-details
   map-into(next-method(),
            identity,
            table("specializers" =>
-                   map(curry(object-name, project),
+                   map(curry(object-information, project),
                        method-specializers(project, method*))));
 end method;
 
@@ -327,7 +333,7 @@ define method object-details
     (project :: <project-object>, parameter :: <parameter>)
  => (result :: false-or(<table>));
   table("name" => parameter-name(parameter),
-        "type" => object-name(project, parameter-type(parameter)));
+        "type" => object-information(project, parameter-type(parameter)));
 end method;
 
 define method object-details
@@ -372,7 +378,7 @@ end method;
 define method object-details
     (project :: <project-object>, slot :: <slot-object>)
  => (result :: false-or(<table>));
-  table("type" => object-name(project, slot-type(project, slot)));
+  table("type" => object-information(project, slot-type(project, slot)));
 end method;
 
 define function direct-methods (#key library-name, module-name, class-name)
