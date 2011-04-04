@@ -364,8 +364,9 @@ end method;
 define method object-details
     (project :: <project-object>, variable :: <variable-object>)
  => (result :: false-or(<table>));
-  table("value" => format-to-string("%s", variable-value(project, variable)),
-        "type" => object-name(project, variable-type(project, variable)));
+  // TODO "value" => format-to-string("%s", variable-value(project, variable))
+  table("type" => 
+          object-information(project, variable-type(project, variable)));
 end method;
 
 define method object-details
