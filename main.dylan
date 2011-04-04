@@ -58,6 +58,10 @@ define method object-type (object :: <complex-type-expression-object>)
   "complex-type-expression"
 end method;
 
+define method object-type (object :: <parameter>)
+  "parameter"
+end method;
+
 define function object-name (project, object)
   let name = environment-object-home-name(project, object);
   if (name)
@@ -190,6 +194,7 @@ define method object-information (project :: <project-object>, slot :: <slot-obj
   let information = next-method();
   information["name"] := object-name(project, getter);
   information["parents"] := object-parents(project, getter);
+  information;
 end method;
 
 define function direct-slots (#key library-name, module-name, class-name)
@@ -251,7 +256,7 @@ define function direct-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-direct-superclasses(method (superclass)
-                           let information = 
+                           let information =
                              object-information(project, superclass);
                            // already specicified globally
                            remove-key!(information, "parents");
@@ -270,7 +275,7 @@ define function all-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-all-superclasses(method (superclass)
-                        push(superclasses, 
+                        push(superclasses,
                              object-information(project, superclass));
                       end method,
                       project, class);
@@ -286,7 +291,7 @@ define function direct-subclasses (#key library-name, module-name, class-name)
                                       module: module);
   let subclasses = make(<deque>);
   do-direct-subclasses(method (subclass)
-                         push(subclasses, 
+                         push(subclasses,
                               object-information(project, subclass));
                        end method,
                        project, class);
@@ -329,11 +334,18 @@ define method object-details
                        method-specializers(project, method*))));
 end method;
 
+define method object-information
+    (project :: <project-object>, object :: <parameter>)
+ => (result :: <table>);
+  table("name" => parameter-name(object),
+        "type" => object-type(object),
+        "details" => object-details(project, object));
+end method;
+
 define method object-details
     (project :: <project-object>, parameter :: <parameter>)
  => (result :: false-or(<table>));
-  table("name" => parameter-name(parameter),
-        "type" => object-information(project, parameter-type(parameter)));
+  table("type" => object-information(project, parameter-type(parameter)));
 end method;
 
 define method object-details
@@ -349,7 +361,7 @@ end method;
 define method object-details
     (project :: <project-object>, function :: <dylan-function-object>)
  => (result :: false-or(<table>));
-  let details = curry(object-details, project);
+  let information = curry(object-information, project);
   let (required :: <parameters>,
        rest :: false-or(<parameter>),
        keys :: <optional-parameters>,
@@ -358,20 +370,20 @@ define method object-details
        values :: <parameters>,
        rest-value :: false-or(<parameter>))
     = function-parameters(project, function);
-  table("required" => map(details, required),
-        "rest" => rest & details(rest),
-        "keys" => map(details, keys),
+  table("required" => map(information, required),
+        "rest" => rest & information(rest),
+        "keys" => map(information, keys),
         "all-keys?" => all-keys?,
-        "next" => next & details(next),
-        "values" => map(details, values),
-        "rest-value" => rest-value & details(rest-value));
+        "next" => next & information(next),
+        "values" => map(information, values),
+        "rest-value" => rest-value & information(rest-value));
 end method;
 
 define method object-details
     (project :: <project-object>, variable :: <variable-object>)
  => (result :: false-or(<table>));
   // TODO "value" => format-to-string("%s", variable-value(project, variable))
-  table("type" => 
+  table("type" =>
           object-information(project, variable-type(project, variable)));
 end method;
 
