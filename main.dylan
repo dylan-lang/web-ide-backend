@@ -1,66 +1,6 @@
-Module: web-ide-backend
+module: web-ide-backend
 
 // See dylan/fundev/sources/environment/protocols/
-
-define method object-type (object :: <library-object>)
- "library"
-end;
-
-define method object-type (object :: <module-object>)
- "module"
-end;
-
-define method object-type (object :: <class-object>)
-  "class"
-end;
-
-define method object-type (object :: <function-object>)
-  "function"
-end;
-
-define method object-type (object :: <generic-function-object>)
-  "generic-function"
-end;
-
-define method object-type (object :: <method-object>)
-  "method"
-end;
-
-define method object-type (object :: <variable-object>)
-  "variable"
-end;
-
-define method object-type (object :: <global-variable-object>)
-  "global-variable"
-end;
-
-define method object-type (object :: <thread-variable-object>)
-  "thread-variable"
-end;
-
-define method object-type (object :: <constant-object>)
-  "constant"
-end;
-
-define method object-type (object :: <slot-object>)
-  "slot"
-end;
-
-define method object-type (object :: <macro-object>)
-  "macro"
-end;
-
-define method object-type (object :: <domain-object>)
-  "domain"
-end;
-
-define method object-type (object :: <complex-type-expression-object>)
-  "complex-type-expression"
-end method;
-
-define method object-type (object :: <parameter>)
-  "parameter"
-end method;
 
 define function object-name (project, object)
   let name = environment-object-home-name(project, object);
@@ -71,23 +11,6 @@ define function object-name (project, object)
                                     qualify-names?: #f)
   end if;
 end function;
-
-define generic object-information
-    (project :: <project-object>, object :: <object>, #key)
- => (result :: <table>);
-
-define method object-information
-    (project :: <project-object>, object :: <object>, #key details? = #t)
- => (result :: <table>);
-  let information =
-    table("name" => object-name(project, object),
-          "type" => object-type(object),
-          "parents" => object-parents(project, object));
-  when (details?)
-    information["details"] := object-details(project, object);
-  end;
-  information;
-end method;
 
 define function callback-handler (#rest args)
   log-debug("%=\n", args);
@@ -193,16 +116,6 @@ end function;
 //                           module: module);
 //   // TODO:
 // end function;
-
-define method object-information
-    (project :: <project-object>, slot :: <slot-object>, #key)
- => (result :: <table>);
-  let getter = slot-getter(project, slot);
-  let information = next-method();
-  information["name"] := object-name(project, getter);
-  information["parents"] := object-parents(project, getter);
-  information;
-end method;
 
 define function direct-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
@@ -317,98 +230,6 @@ end function;
 //   table("parents" => #f,
 //         "objects" => subclasses);
 // end function;
-
-define generic object-details
-    (project :: <project-object>, object :: <object>)
- => (result :: false-or(<table>));
-
-define method object-details
-    (project :: <project-object>, object :: <object>)
- => (result :: false-or(<table>));
-  #f;
-end method;
-
-define method object-details
-    (project :: <project-object>, class :: <class-object>)
- => (result :: false-or(<table>));
-  let superclasses = make(<deque>);
-  do-direct-superclasses(method (superclass)
-                           push(superclasses,
-                                object-information(project, superclass,
-                                                   details?: #f));
-                         end,
-                         project, class);
-  table("direct-superclasses" => superclasses);
-end method;
-
-define method object-details
-    (project :: <project-object>, method* :: <method-object>)
- => (result :: false-or(<table>));
-  map-into(next-method(),
-           identity,
-           table("specializers" =>
-                   map(curry(object-information, project),
-                       method-specializers(project, method*))));
-end method;
-
-define method object-information
-    (project :: <project-object>, object :: <parameter>, #key)
- => (result :: <table>);
-  table("name" => parameter-name(object),
-        "type" => object-type(object),
-        "details" => object-details(project, object));
-end method;
-
-define method object-details
-    (project :: <project-object>, parameter :: <parameter>)
- => (result :: false-or(<table>));
-  table("type" => object-information(project, parameter-type(parameter)));
-end method;
-
-define method object-details
-    (project :: <project-object>, parameter :: <optional-parameter>)
- => (result :: false-or(<table>));
-  map-into(next-method(),
-           identity,
-           table("keyword" => parameter-keyword(parameter),
-                 "default" =>
-                   format-to-string("%s", parameter-default-value(parameter))));
-end method;
-
-define method object-details
-    (project :: <project-object>, function :: <dylan-function-object>)
- => (result :: false-or(<table>));
-  let information = curry(object-information, project);
-  let (required :: <parameters>,
-       rest :: false-or(<parameter>),
-       keys :: <optional-parameters>,
-       all-keys? :: <boolean>,
-       next :: false-or(<parameter>),
-       values :: <parameters>,
-       rest-value :: false-or(<parameter>))
-    = function-parameters(project, function);
-  table("required" => map(information, required),
-        "rest" => rest & information(rest),
-        "keys" => map(information, keys),
-        "all-keys?" => all-keys?,
-        "next" => next & information(next),
-        "values" => map(information, values),
-        "rest-value" => rest-value & information(rest-value));
-end method;
-
-define method object-details
-    (project :: <project-object>, variable :: <variable-object>)
- => (result :: false-or(<table>));
-  // TODO "value" => format-to-string("%s", variable-value(project, variable))
-  table("type" =>
-          object-information(project, variable-type(project, variable)));
-end method;
-
-define method object-details
-    (project :: <project-object>, slot :: <slot-object>)
- => (result :: false-or(<table>));
-  table("type" => object-information(project, slot-type(project, slot)));
-end method;
 
 define function direct-methods (#key library-name, module-name, class-name)
  => (result :: <table>);
