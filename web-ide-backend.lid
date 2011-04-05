@@ -1,3 +1,6 @@
 library: web-ide-backend
-files: library
-  main
+files:	 library
+	 type
+	 information
+	 details
+	 main
