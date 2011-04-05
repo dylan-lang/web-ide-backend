@@ -256,14 +256,11 @@ define function direct-superclasses (#key library-name, module-name, class-name)
                                       module: module);
   let superclasses = make(<deque>);
   do-direct-superclasses(method (superclass)
-                           let information =
-                             object-information(project, superclass);
-                           // already specicified globally
-                           remove-key!(information, "parents");
-                           push(superclasses, information);
+                           push(superclasses,
+                                object-information(project, superclass));
                          end,
                          project, class);
-  table("parents" => vector(library-name, module-name),
+  table("parents" => #f,
         "objects" => superclasses);
 end function;
 
