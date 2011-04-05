@@ -43,8 +43,8 @@ define function library-names ()
     end for;
     *libraries* := remove-duplicates!(names, test: \=);
   end unless;
-  table("parents" => #(),
-        "objects" => *libraries*);
+  table(parents: => #(),
+        objects: => *libraries*);
 end function;
 
 define function find-library/module (library-name, module-name)
@@ -62,37 +62,37 @@ end function;
 
 define function modules (#key library-name)
   let (project, library) = find-library/module(library-name, #f);
-  table("parents" => vector(library-name),
-        "objects" => map(curry(object-name, project),
+  table(parents: => vector(library-name),
+        objects: => map(curry(object-name, project),
                          library-modules(project, library)));
 end function;
 
 define function defined-modules (#key library-name)
   let (project, library) = find-library/module(library-name, #f);
-  table("parents" => vector(library-name),
-        "objects" => map(curry(object-name, project),
+  table(parents: => vector(library-name),
+        objects: => map(curry(object-name, project),
                          library-modules(project, library,
                                          imported?: #f)));
 end function;
 
 define function used-libraries (#key library-name)
   let (project, library) = find-library/module(library-name, #f);
-  table("parents" => #(),
-        "objects" => map(curry(object-name, project),
+  table(parents: => #(),
+        objects: => map(curry(object-name, project),
                          source-form-used-definitions(project, library)));
 end function;
 
 define function used-modules (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  table("parents" => #f,
-        "objects" => map(method (used-module)
+  table(parents: => #f,
+        objects: => map(method (used-module)
                            let used-module-name =
                              environment-object-home-name(project, used-module);
                            let used-module-library =
                              name-namespace(project, used-module-name);
-                           table("name" => object-name(project, used-module),
-                                 "parents" => vector(object-name(project, used-module-library)))
+                           table(name: => object-name(project, used-module),
+                                 parents: => vector(object-name(project, used-module-library)))
                          end method,
                          source-form-used-definitions(project, module)));
 end function;
@@ -102,8 +102,8 @@ define function definitions (#key library-name, module-name)
     find-library/module(library-name, module-name);
   let definitions = module-definitions(project, module,
                                        imported?: #f);
-  table("parents" => vector(library-name, module-name),
-        "objects" => map(curry(object-information, project),
+  table(parents: => vector(library-name, module-name),
+        objects: => map(curry(object-information, project),
                          definitions));
 end function;
 
@@ -126,12 +126,12 @@ define function direct-slots (#key library-name, module-name, class-name)
   do-direct-slots(method (slot)
                     let information = object-information(project, slot);
                     // already specicified globally
-                    remove-key!(information, "parents");
+                    remove-key!(information, parents:);
                     push(slots, information)
                   end,
                   project, class);
-  table("parents" => vector(library-name, module-name),
-        "objects" => slots);
+  table(parents: => vector(library-name, module-name),
+        objects: => slots);
 end function;
 
 define function all-slots (#key library-name, module-name, class-name)
@@ -145,8 +145,8 @@ define function all-slots (#key library-name, module-name, class-name)
                  push(slots, object-information(project, slot));
                end,
                project, class);
-  table("parents" => #f,
-        "objects" => slots);
+  table(parents: => #f,
+        objects: => slots);
 end function;
 
 define function object-parents (project, object)
@@ -178,8 +178,8 @@ define function direct-superclasses (#key library-name, module-name, class-name)
                                 object-information(project, superclass));
                          end,
                          project, class);
-  table("parents" => #f,
-        "objects" => superclasses);
+  table(parents: => #f,
+        objects: => superclasses);
 end function;
 
 define function all-superclasses (#key library-name, module-name, class-name)
@@ -194,8 +194,8 @@ define function all-superclasses (#key library-name, module-name, class-name)
                              object-information(project, superclass));
                       end method,
                       project, class);
-  table("parents" => #f,
-        "objects" => superclasses);
+  table(parents: => #f,
+        objects: => superclasses);
 end function;
 
 define function direct-subclasses (#key library-name, module-name, class-name)
@@ -210,8 +210,8 @@ define function direct-subclasses (#key library-name, module-name, class-name)
                               object-information(project, subclass));
                        end method,
                        project, class);
-  table("parents" => #f,
-        "objects" => subclasses);
+  table(parents: => #f,
+        objects: => subclasses);
 end function;
 
 // TODO: not supported by environment API
@@ -226,8 +226,8 @@ end function;
 //                       push(subclasses, object-information(project, subclass));
 //                     end method,
 //                     project, class);
-//   table("parents" => #f,
-//         "objects" => subclasses);
+//   table(parents: => #f,
+//         objects: => subclasses);
 // end function;
 
 define function direct-methods (#key library-name, module-name, class-name)
@@ -242,8 +242,8 @@ define function direct-methods (#key library-name, module-name, class-name)
                       push(methods, object-information(project, method*));
                     end method,
                     project, class);
-  table("parents" => #f,
-        "objects" => methods);
+  table(parents: => #f,
+        objects: => methods);
 end function;
 
 define function all-methods (#key library-name, module-name, class-name)
@@ -257,8 +257,8 @@ define function all-methods (#key library-name, module-name, class-name)
                    push(methods, object-information(project, method*));
                  end method,
                  project, class);
-  table("parents" => #f,
-        "objects" => methods);
+  table(parents: => #f,
+        objects: => methods);
 end function;
 
 define function methods (#key library-name, module-name, generic-function-name)
@@ -273,8 +273,8 @@ define function methods (#key library-name, module-name, generic-function-name)
                                   push(methods, object-information(project, method*));
                                 end method,
                                 project, generic-function);
-    table("parents" => #f,
-          "objects" => methods);
+    table(parents: => #f,
+          objects: => methods);
   end if;
 end function;
 
@@ -307,26 +307,26 @@ define function filtered (function)
           if (instance?(a, <string>))
             a < b
           else
-            a["name"] < b["name"]
+            a[name:] < b[name:]
           end if;
         end method;
 
   method (#rest arguments)
     let prefix = get-query-value("prefix");
     let result = apply(function, arguments);
-    result["objects"] := sort(result["objects"], test: compare);
+    result[objects:] := sort(result[objects:], test: compare);
     if (prefix)
-      result["objects"] := choose(method (object)
+      result[objects:] := choose(method (object)
                                     let name = if (instance?(object, <string>))
                                                  object
                                                else
-                                                 object["name"]
+                                                 object[name:]
                                                end if;
                                     copy-sequence(name, end: min(size(name),
                                                                  size(prefix)))
                                       = prefix
                                   end method,
-                                  result["objects"]);
+                                  result[objects:]);
     end if;
     result;
   end method;
