@@ -72,15 +72,21 @@ define function object-name (project, object)
   end if;
 end function;
 
-define generic object-information (project :: <project-object>, object :: <object>)
+define generic object-information
+    (project :: <project-object>, object :: <object>, #key)
  => (result :: <table>);
 
-define method object-information (project :: <project-object>, object :: <object>)
+define method object-information
+    (project :: <project-object>, object :: <object>, #key details? = #t)
  => (result :: <table>);
-  table("name" => object-name(project, object),
-        "type" => object-type(object),
-        "parents" => object-parents(project, object),
-        "details" => object-details(project, object));
+  let information =
+    table("name" => object-name(project, object),
+          "type" => object-type(object),
+          "parents" => object-parents(project, object));
+  when (details?)
+    information["details"] := object-details(project, object);
+  end;
+  information;
 end method;
 
 define function callback-handler (#rest args)
@@ -188,7 +194,8 @@ end function;
 //   // TODO:
 // end function;
 
-define method object-information (project :: <project-object>, slot :: <slot-object>)
+define method object-information
+    (project :: <project-object>, slot :: <slot-object>, #key)
  => (result :: <table>);
   let getter = slot-getter(project, slot);
   let information = next-method();
@@ -229,7 +236,6 @@ define function all-slots (#key library-name, module-name, class-name)
   table("parents" => #f,
         "objects" => slots);
 end function;
-
 
 define function object-parents (project, object)
   let parents = make(<deque>);
@@ -316,9 +322,23 @@ define generic object-details
     (project :: <project-object>, object :: <object>)
  => (result :: false-or(<table>));
 
-define method object-details (project :: <project-object>, object :: <object>)
+define method object-details
+    (project :: <project-object>, object :: <object>)
  => (result :: false-or(<table>));
   #f;
+end method;
+
+define method object-details
+    (project :: <project-object>, class :: <class-object>)
+ => (result :: false-or(<table>));
+  let superclasses = make(<deque>);
+  do-direct-superclasses(method (superclass)
+                           push(superclasses,
+                                object-information(project, superclass,
+                                                   details?: #f));
+                         end,
+                         project, class);
+  table("direct-superclasses" => superclasses);
 end method;
 
 define method object-details
@@ -332,7 +352,7 @@ define method object-details
 end method;
 
 define method object-information
-    (project :: <project-object>, object :: <parameter>)
+    (project :: <project-object>, object :: <parameter>, #key)
  => (result :: <table>);
   table("name" => parameter-name(object),
         "type" => object-type(object),
