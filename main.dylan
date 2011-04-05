@@ -107,15 +107,14 @@ define function definitions (#key library-name, module-name)
                          definitions));
 end function;
 
-// TODO:
-// define function symbol-information (#key library-name, module-name, symbol-name)
-//   let (project, library, module) =
-//     find-library/module(library-name, module-name);
-//   find-environment-object(project, symbol-name,
-//                           library: library,
-//                           module: module);
-//   // TODO:
-// end function;
+define function info (#key library-name, module-name, symbol-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  object-information(project,
+                     find-environment-object(project, symbol-name,
+                                             library: library,
+                                             module: module));
+end function;
 
 define function direct-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
@@ -290,11 +289,11 @@ end function;
 
 
 // TODO:
-define function configuration ()
-  table("" => "library",
-        "library" => "module",
-        "module" => "symbol")
-end function;
+// define function configuration ()
+//   table("" => "library",
+//         "library" => "module",
+//         "module" => "symbol")
+// end function;
 
 define function json-handler (function)
   method (#rest arguments)
@@ -383,19 +382,18 @@ define function start ()
       direct-slots, filtered?: #t);
   add("/api/all-slots/{library-name}/{module-name}/{class-name}",
       all-slots, filtered?: #t);
-
+  
   add("/api/methods/{library-name}/{module-name}/{generic-function-name}",
       methods, filtered?: #t);
 
   add("/api/source/{library-name}/{module-name}/{object-name}",
       source);
 
+  add("/api/info/{library-name}/{module-name}/{symbol-name}",
+      info);
+
   // TODO:
-  add("/configuration", configuration);
-
-  // add("/api/symbol/{library-name}/{module-name}/{symbol-name}",
-  //     symbol-information);
-
+  // add("/configuration", configuration);
   // /search/{types+}/{term} => [{module: 'common-dylan'}, ...]
 
   start-server(server);
