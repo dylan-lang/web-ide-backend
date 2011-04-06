@@ -61,25 +61,41 @@ define function find-library/module (library-name, module-name)
 end function;
 
 define function modules (#key library-name)
-  let (project, library) = find-library/module(library-name, #f);
+  let (project, library) = 
+    find-library/module(library-name, #f);
   table(parents: => vector(library-name),
-        objects: => map(curry(object-name, project),
-                         library-modules(project, library)));
+        objects: => map(method (module)
+                          let information = 
+                            object-information(project, module);
+                          // already specicified globally
+                          remove-key!(information, parents:);
+                          information
+                        end method,
+                        library-modules(project, library)));
 end function;
 
 define function defined-modules (#key library-name)
-  let (project, library) = find-library/module(library-name, #f);
+  let (project, library) = 
+    find-library/module(library-name, #f);
   table(parents: => vector(library-name),
-        objects: => map(curry(object-name, project),
-                         library-modules(project, library,
-                                         imported?: #f)));
+        objects: => map(method (module)
+                          let information = 
+                            object-information(project, module);
+                          // already specicified globally
+                          remove-key!(information, parents:);
+                          information
+                        end method,
+                        library-modules(project, library,
+                                        imported?: #f)));
 end function;
 
 define function used-libraries (#key library-name)
-  let (project, library) = find-library/module(library-name, #f);
+  let (project, library) = 
+    find-library/module(library-name, #f);
   table(parents: => #(),
-        objects: => map(curry(object-name, project),
-                         source-form-used-definitions(project, library)));
+        objects: => 
+          map(curry(object-information, project),
+              source-form-used-definitions(project, library)));
 end function;
 
 define function used-modules (#key library-name, module-name)
