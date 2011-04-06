@@ -11,9 +11,11 @@ define method object-information
     table(name: => object-name(project, object),
           type: => object-type(object),
           parents: => object-parents(project, object));
-  when (details?)
+  if (details?)
     information[details:] := object-details(project, object);
-  end;
+  else
+    information[incomplete?:] := #t;
+  end if;
   information;
 end method;
 
