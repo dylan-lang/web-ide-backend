@@ -5,12 +5,15 @@ define generic object-information
  => (result :: <table>);
 
 define method object-information
-    (project :: <project-object>, object :: <object>, #key details? = #t)
+    (project :: <project-object>, object :: <object>, 
+     #key details? = #t, parents? = #t)
  => (result :: <table>);
   let information =
     table(name: => object-name(project, object),
-          type: => object-type(object),
-          parents: => object-parents(project, object));
+          type: => object-type(object));
+  when (parents?)
+    information[parents:] := object-parents(project, object);
+  end;
   if (details?)
     information[details:] := object-details(project, object);
   else

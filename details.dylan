@@ -52,7 +52,10 @@ end method;
 define method object-details
     (project :: <project-object>, function :: <dylan-function-object>)
  => (result :: false-or(<table>));
-  let information = curry(object-information, project);
+  local method information (object)
+          object-information(project, object,
+                             details?: #f);
+        end method;
   let (required :: <parameters>,
        rest :: false-or(<parameter>),
        keys :: <optional-parameters>,
@@ -81,7 +84,8 @@ end method;
 define method object-details
     (project :: <project-object>, slot :: <slot-object>)
  => (result :: false-or(<table>));
-  table(type: => object-information(project, slot-type(project, slot)));
+  table(type: => object-information(project, slot-type(project, slot),
+                                    details?: #f));
 end method;
 
 define method object-details

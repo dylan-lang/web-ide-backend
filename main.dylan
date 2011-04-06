@@ -63,28 +63,18 @@ end function;
 define function modules (#key library-name)
   let (project, library) = 
     find-library/module(library-name, #f);
-  table(parents: => vector(library-name),
-        objects: => map(method (module)
-                          let information = 
-                            object-information(project, module);
-                          // already specicified globally
-                          remove-key!(information, parents:);
-                          information
-                        end method,
+  let information = curry(object-information, project);
+  table(parents: => vector(information(library, details?: #f)),
+        objects: => map(rcurry(information, parents?: #f),
                         library-modules(project, library)));
 end function;
 
 define function defined-modules (#key library-name)
   let (project, library) = 
     find-library/module(library-name, #f);
-  table(parents: => vector(library-name),
-        objects: => map(method (module)
-                          let information = 
-                            object-information(project, module);
-                          // already specicified globally
-                          remove-key!(information, parents:);
-                          information
-                        end method,
+  let information = curry(object-information, project);
+  table(parents: => vector(information(library, details?: #f)),
+        objects: => map(rcurry(information, parents?: #f),
                         library-modules(project, library,
                                         imported?: #f)));
 end function;
@@ -102,15 +92,9 @@ define function used-modules (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
   table(parents: => #f,
-        objects: => map(method (used-module)
-                           let used-module-name =
-                             environment-object-home-name(project, used-module);
-                           let used-module-library =
-                             name-namespace(project, used-module-name);
-                           table(name: => object-name(project, used-module),
-                                 parents: => vector(object-name(project, used-module-library)))
-                         end method,
-                         source-form-used-definitions(project, module)));
+        objects: => 
+          map(curry(object-information, project),
+              source-form-used-definitions(project, module)));
 end function;
 
 define function definitions (#key library-name, module-name)
@@ -118,9 +102,13 @@ define function definitions (#key library-name, module-name)
     find-library/module(library-name, module-name);
   let definitions = module-definitions(project, module,
                                        imported?: #f);
-  table(parents: => vector(library-name, module-name),
-        objects: => map(curry(object-information, project),
-                         definitions));
+  let information = curry(object-information, project);
+  table(parents: => 
+          map(rcurry(information, details?: #f),
+              vector(library, module)),
+        objects: => 
+          map(rcurry(information, parents?: #f),
+              definitions));
 end function;
 
 define function info (#key library-name, module-name, symbol-name)
@@ -138,15 +126,17 @@ define function direct-slots (#key library-name, module-name, class-name)
   let class = find-environment-object(project, class-name,
                                       library: library,
                                       module: module);
+  let information = curry(object-information, project);
   let slots = make(<deque>);
   do-direct-slots(method (slot)
-                    let information = object-information(project, slot);
-                    // already specicified globally
-                    remove-key!(information, parents:);
-                    push(slots, information)
+                    push(slots, information(slot, parents?: #f));
                   end,
                   project, class);
-  table(parents: => vector(library-name, module-name),
+  table(parents: => 
+          map(method (parent)
+                information(parent, details?: #f)
+              end,
+              vector(library, module)),
         objects: => slots);
 end function;
 
@@ -173,7 +163,9 @@ define function object-parents (project, object)
       environment-object-home-name(project, current);
     if (home-name)
       parent := name-namespace(project, home-name);
-      parents := add!(parents, object-name(project, parent));
+      parents := 
+        add!(parents, object-information(project, parent,
+                                         details?: #f));
     else
       parent := #f;
     end if;
@@ -232,19 +224,6 @@ end function;
 
 // TODO: not supported by environment API
 // define function all-subclasses (#key library-name, module-name, class-name)
-//   let (project, library, module) =
-//     find-library/module(library-name, module-name);
-//   let class = find-environment-object(project, class-name,
-//                                       library: library,
-//                                       module: module);
-//   let subclasses = make(<deque>);
-//   do-all-subclasses(method (subclass)
-//                       push(subclasses, object-information(project, subclass));
-//                     end method,
-//                     project, class);
-//   table(parents: => #f,
-//         objects: => subclasses);
-// end function;
 
 define function direct-methods (#key library-name, module-name, class-name)
  => (result :: <table>);
