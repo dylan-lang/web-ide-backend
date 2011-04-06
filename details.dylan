@@ -83,3 +83,10 @@ define method object-details
  => (result :: false-or(<table>));
   table(type: => object-information(project, slot-type(project, slot)));
 end method;
+
+define method object-details
+    (project :: <project-object>, module :: <module-object>)
+ => (result :: false-or(<table>));
+  table(definitions: =>
+          size(module-definitions(project, module, imported?: #f)));
+end method;
