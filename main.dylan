@@ -61,7 +61,7 @@ define function find-library/module (library-name, module-name)
 end function;
 
 define function modules (#key library-name)
-  let (project, library) = 
+  let (project, library) =
     find-library/module(library-name, #f);
   let information = curry(object-information, project);
   table(parents: => vector(information(library, details?: #f)),
@@ -70,7 +70,7 @@ define function modules (#key library-name)
 end function;
 
 define function defined-modules (#key library-name)
-  let (project, library) = 
+  let (project, library) =
     find-library/module(library-name, #f);
   let information = curry(object-information, project);
   table(parents: => vector(information(library, details?: #f)),
@@ -80,10 +80,10 @@ define function defined-modules (#key library-name)
 end function;
 
 define function used-libraries (#key library-name)
-  let (project, library) = 
+  let (project, library) =
     find-library/module(library-name, #f);
   table(parents: => #(),
-        objects: => 
+        objects: =>
           map(curry(object-information, project),
               source-form-used-definitions(project, library)));
 end function;
@@ -92,7 +92,7 @@ define function used-modules (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
   table(parents: => #f,
-        objects: => 
+        objects: =>
           map(curry(object-information, project),
               source-form-used-definitions(project, module)));
 end function;
@@ -103,10 +103,10 @@ define function definitions (#key library-name, module-name)
   let definitions = module-definitions(project, module,
                                        imported?: #f);
   let information = curry(object-information, project);
-  table(parents: => 
+  table(parents: =>
           map(rcurry(information, details?: #f),
               vector(library, module)),
-        objects: => 
+        objects: =>
           map(rcurry(information, parents?: #f),
               definitions));
 end function;
@@ -132,7 +132,7 @@ define function direct-slots (#key library-name, module-name, class-name)
                     push(slots, information(slot, parents?: #f));
                   end,
                   project, class);
-  table(parents: => 
+  table(parents: =>
           map(method (parent)
                 information(parent, details?: #f)
               end,
@@ -163,7 +163,7 @@ define function object-parents (project, object)
       environment-object-home-name(project, current);
     if (home-name)
       parent := name-namespace(project, home-name);
-      parents := 
+      parents :=
         add!(parents, object-information(project, parent,
                                          details?: #f));
     else
@@ -279,9 +279,17 @@ define function source (#key library-name, module-name, object-name)
   let object = find-environment-object(project, object-name,
                                        library: library,
                                        module: module);
-  environment-object-source(project, object);
+  let location =
+    environment-object-source-location(project, object);
+  let (filename, line)
+    = source-line-location(location.source-location-source-record,
+                           location.source-location-start-line);
+  table(filename: => filename,
+        line: => line,
+        column: => location.source-location-start-column,
+        end-line: => line + location.source-location-end-line,
+        source: => environment-object-source(project, object));
 end function;
-
 
 // TODO:
 // define function configuration ()
@@ -377,7 +385,7 @@ define function start ()
       direct-slots, filtered?: #t);
   add("/api/all-slots/{library-name}/{module-name}/{class-name}",
       all-slots, filtered?: #t);
-  
+
   add("/api/methods/{library-name}/{module-name}/{generic-function-name}",
       methods, filtered?: #t);
 
