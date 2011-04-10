@@ -111,15 +111,6 @@ define function definitions (#key library-name, module-name)
               definitions));
 end function;
 
-define function info (#key library-name, module-name, symbol-name)
-  let (project, library, module) =
-    find-library/module(library-name, module-name);
-  object-information(project,
-                     find-environment-object(project, symbol-name,
-                                             library: library,
-                                             module: module));
-end function;
-
 define function direct-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
@@ -290,6 +281,17 @@ define function source (#key library-name, module-name, object-name)
         end-line: => line + location.source-location-end-line,
         source: => environment-object-source(project, object));
 end function;
+
+// TODO: identifier!
+define function info (#key library-name, module-name, symbol-name)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  object-information(project,
+                     find-environment-object(project, symbol-name,
+                                             library: library,
+                                             module: module));
+end function;
+
 
 // TODO:
 // define function configuration ()
