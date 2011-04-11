@@ -49,6 +49,7 @@ end function;
 
 define function find-library/module (library-name, module-name)
   let project = find-project(library-name);
+  project.project-opened-by-user? := #t;
   open-project-database(project);
   let library = project.project-library;
   let module = if (module-name)
