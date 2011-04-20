@@ -49,6 +49,7 @@ end function;
 
 define function find-library/module (library-name, module-name)
   let project = find-project(library-name);
+  project.project-opened-by-user? := #t;
   open-project-database(project);
   let library = project.project-library;
   let module = if (module-name)
@@ -264,21 +265,28 @@ define function methods (#key library-name, module-name, generic-function-name)
   end if;
 end function;
 
-define function source (#key library-name, module-name, object-name)
+define function find-object (project, library, module, identifier :: <string>)
+ => (result :: false-or(<environment-object>));
+  let id = element($ids, identifier, default: #f);
+  find-environment-object(project, id | identifier,
+                          library: library,
+                          module: module);
+end function;
+
+define function source (#key library-name, module-name, identifier)
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  let object = find-environment-object(project, object-name,
-                                       library: library,
-                                       module: module);
+  let object = find-object(project, library, module, identifier);
   let location =
     environment-object-source-location(project, object);
-  let (filename, line)
-    = source-line-location(location.source-location-source-record,
-                           location.source-location-start-line);
+  let (start-line, end-line) =
+    object-source-location-lines(location);
+  let filename =
+    source-line-location(location.source-location-source-record, 0);
   table(filename: => filename,
-        line: => line,
+        line: => location.source-location-start-line,
         column: => location.source-location-start-column,
-        end-line: => line + location.source-location-end-line,
+        end-line: => location.source-location-end-line,
         source: => environment-object-source(project, object));
 end function;
 
