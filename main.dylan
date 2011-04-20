@@ -111,15 +111,6 @@ define function definitions (#key library-name, module-name)
               definitions));
 end function;
 
-define function info (#key library-name, module-name, symbol-name)
-  let (project, library, module) =
-    find-library/module(library-name, module-name);
-  object-information(project,
-                     find-environment-object(project, symbol-name,
-                                             library: library,
-                                             module: module));
-end function;
-
 define function direct-slots (#key library-name, module-name, class-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
@@ -291,6 +282,16 @@ define function source (#key library-name, module-name, object-name)
         source: => environment-object-source(project, object));
 end function;
 
+end function;
+
+define function info (#key library-name, module-name, identifier)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let object = find-object(project, library, module, identifier);
+  object-information(project, object);
+end function;
+
+
 // TODO:
 // define function configuration ()
 //   table("" => "library",
@@ -392,7 +393,7 @@ define function start ()
   add("/api/source/{library-name}/{module-name}/{object-name}",
       source);
 
-  add("/api/info/{library-name}/{module-name}/{symbol-name}",
+  add("/api/info/{library-name}/{module-name}/{identifier}",
       info);
 
   // TODO:
