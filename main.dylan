@@ -282,6 +282,24 @@ define function source (#key library-name, module-name, object-name)
         source: => environment-object-source(project, object));
 end function;
 
+define function used-definitions (#key library-name, module-name, identifier)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let object = find-object(project, library, module, identifier);
+  table(parents: => #f,
+        objects: =>
+          map(curry(object-information, project),
+              source-form-used-definitions(project, object)));
+end function;
+
+define function clients (#key library-name, module-name, identifier)
+  let (project, library, module) =
+    find-library/module(library-name, module-name);
+  let object = find-object(project, library, module, identifier);
+  table(parents: => #f,
+        objects: =>
+          map(curry(object-information, project),
+              source-form-clients(project, object)));
 end function;
 
 define function info (#key library-name, module-name, identifier)
@@ -390,7 +408,12 @@ define function start ()
   add("/api/methods/{library-name}/{module-name}/{generic-function-name}",
       methods, filtered?: #t);
 
-  add("/api/source/{library-name}/{module-name}/{object-name}",
+  add("/api/clients/{library-name}/{module-name}/{identifier}",
+      clients, filtered?: #t);
+  add("/api/used-definitions/{library-name}/{module-name}/{identifier}",
+      used-definitions, filtered?: #t);
+
+  add("/api/source/{library-name}/{module-name}/{identifier}",
       source);
 
   add("/api/info/{library-name}/{module-name}/{identifier}",
