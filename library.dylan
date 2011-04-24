@@ -20,6 +20,7 @@ define module web-ide-backend
   use file-system;
   use print;
   use format;
+  use streams;
   use table-extensions;
   use operating-system,
     rename: { load-library => os/load-library };
