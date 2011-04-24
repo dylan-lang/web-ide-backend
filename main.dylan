@@ -317,16 +317,16 @@ define function info (#key library-name, module-name, identifier)
   object-information(project, object);
 end function;
 
-define function macroexpand (#key library-name, module-name)
+define function macroexpansion (#key library-name, module-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
   let trace-stream = #f;
-  let source = get-query-value("source");
+  let source = get-query-value("value");
   let stream = make(<string-stream>, direction: #"output");
   project-macroexpand-code(project, module, source,
                            expansion-stream: stream,
                            trace-stream: trace-stream);
-  table("expansion" => stream-contents(stream));
+  table("macroexpansion" => stream-contents(stream));
 end function;
 
 // TODO:
@@ -438,8 +438,8 @@ define function start ()
   add("/api/info/{library-name}/{module-name}/{identifier}",
       info);
 
-  add("/api/macroexpand/{library-name}/{module-name}",
-      macroexpand);
+  add("/api/macroexpansion/{library-name}/{module-name}",
+      macroexpansion);
 
   // TODO:
   // add("/configuration", configuration);
