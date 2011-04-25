@@ -273,10 +273,21 @@ define function find-object (project, library, module, identifier :: <string>)
                           module: module);
 end function;
 
-define function source (#key library-name, module-name, identifier)
+define function source (#key identifiers)
+  let library-name = identifiers[0];
+  let module-name = when (identifiers.size > 1)
+                      identifiers[1];
+                    end;
+  let identifier = when (identifiers.size > 2)
+                     identifiers[2];
+                   end;
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  let object = find-object(project, library, module, identifier);
+  let object = if (identifier)
+                 find-object(project, library, module, identifier);
+               else
+                 module | library
+               end if;
   let location =
     environment-object-source-location(project, object);
   let (start-line, end-line) =
@@ -432,7 +443,7 @@ define function start ()
   add("/api/used-definitions/{library-name}/{module-name}/{identifier}",
       used-definitions, filtered?: #t);
 
-  add("/api/source/{library-name}/{module-name}/{identifier}",
+  add("/api/source/{identifiers+}",
       source);
 
   add("/api/info/{library-name}/{module-name}/{identifier}",
