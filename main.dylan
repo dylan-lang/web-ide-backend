@@ -337,6 +337,45 @@ define function source (#key identifiers)
   end select;
 end function;
 
+
+/* TODO:
+  from env/tools/proj-commands:
+
+  let progress-handler = method (numerator, denominator) ... end;
+
+  parse-project-source(project,
+                       progress-callback:    progress-handler,
+                       error-handler:        condition-handler,
+                       process-subprojects?: process-subprojects?);
+
+  build-project(project,
+                clean?:               clean?,
+                link?:                #f,
+                progress-callback:    progress-handler,
+                error-handler:        condition-handler,
+                save-databases?:      save-databases?,
+                copy-sources?:        copy-sources?,
+                process-subprojects?: process-subprojects?);
+
+ link-project(project,
+              progress-callback:    progress-handler,
+              error-handler:        condition-handler,
+              process-subprojects?: process-subprojects?,
+              release?:             release?);
+
+
+  let startup-option = project.application-startup-option;
+  let machine = project.project-debug-machine
+      | environment-host-machine();
+  run-application(project, machine: machine,
+                  startup-option: startup-option)
+  stop-application(project) // PAUSE
+  continue-application(project);
+  update-application(project, progress-callback: progress) // ???
+  close-application(project, wait-for-termination?: #t) // STOP
+
+*/
+
 define function used-definitions (#key library-name, module-name, identifier)
   let (project, library, module) =
     find-library/module(library-name, module-name);
