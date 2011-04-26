@@ -9,6 +9,7 @@ define library web-ide-backend
   use environment-commands;
   use environment-protocols;
   use source-records;
+  use http-common;
   use koala;
   use json;
 end;
@@ -33,5 +34,6 @@ define module web-ide-backend
   use source-records;
   use source-records-implementation;
   use koala;
+  use http-common;
   use json;
 end;
