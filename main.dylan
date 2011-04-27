@@ -16,11 +16,15 @@ define function callback-handler (#rest args)
   log-debug("%=\n", args);
 end function;
 
+define constant $parse-lock = make(<lock>);
+
 define function open-project-database (project :: <project-object>)
   open-project-compiler-database(project,
                                  warning-callback: callback-handler,
                                  error-handler: callback-handler);
-  parse-project-source(project);
+  with-lock($parse-lock)
+    parse-project-source(project);
+  end;
 end function;
 
 define variable *libraries* = #f;
