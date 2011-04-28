@@ -351,24 +351,49 @@ define function source (#key identifiers)
 end function;
 
 
+define variable *build-progress* = 0;
+
+define variable *build-project* = #f;
+
+define constant $build-lock = make(<lock>);
+
+define function build (#key library-name)
+  let (project, library) = find-library/module(library-name, #f);
+  with-lock ($build-lock)
+    *build-project* := project;
+    table(built?: =>
+            build-project(project,
+                          progress-callback:
+                            method (numerator, denominator, #rest foo)
+                              *build-progress* :=
+                                as(<float>, numerator) / as(<float>, denominator);
+                              log-debug("build progress: %s", *build-progress*);
+                            end method,
+                          error-handler:
+                            method (#rest args)
+                              // TODO: save and serve in build-progress
+                              log-debug("build error: %=", args);
+                            end method,
+                          clean?: #f,
+                          link?: #f,
+                          save-databases?: #t,
+                          copy-sources?: #f,
+                          process-subprojects?: #t));
+  end with-lock;
+end function;
+
+define function build-progress ()
+  if (*build-project*)
+    table(object: =>
+            object-information(*build-project*,
+                               *build-project*.project-library),
+          progress: => *build-progress*);
+  end if;
+end function;
+
 /* TODO:
   from env/tools/proj-commands:
 
-  let progress-handler = method (numerator, denominator) ... end;
-
-  parse-project-source(project,
-                       progress-callback:    progress-handler,
-                       error-handler:        condition-handler,
-                       process-subprojects?: process-subprojects?);
-
-  build-project(project,
-                clean?:               clean?,
-                link?:                #f,
-                progress-callback:    progress-handler,
-                error-handler:        condition-handler,
-                save-databases?:      save-databases?,
-                copy-sources?:        copy-sources?,
-                process-subprojects?: process-subprojects?);
 
  link-project(project,
               progress-callback:    progress-handler,
@@ -591,6 +616,10 @@ define function start ()
       macroexpansion);
 
   add("/api/search/{term}", search);
+
+  add("/api/build/{library-name}", build);
+  add("/api/build-progress", build-progress);
+
   // TODO:
   // add("/configuration", configuration);
 
