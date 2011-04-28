@@ -34,6 +34,14 @@ define method object-details
 end method;
 
 define method object-details
+    (project :: <project-object>, domain :: <domain-object>)
+ => (result :: false-or(<table>));
+  table(specializers: =>
+          map(curry(object-information, project),
+              domain-specializers(project, domain)));
+end method;
+
+define method object-details
     (project :: <project-object>, parameter :: <parameter>)
  => (result :: false-or(<table>));
   table(type: => object-information(project, parameter-type(parameter)));

@@ -27,6 +27,12 @@ define constant $id-separator = ";";
 define constant $ids = make(<string-table>);
 
 define method object-identifier
+    (project :: <project-object>, id :: <integer>)
+ => (identifier :: <string>);
+  integer-to-string(id);
+end method;
+
+define method object-identifier
     (project :: <project-object>, id :: <id>)
  => (identifier :: <string>);
   let module-id = id.id-module;
@@ -65,13 +71,14 @@ define method object-identifier
 end method;
 
 define method object-information
-    (project :: <project-object>, method* :: <method-object>, #key)
+    (project :: <project-object>,
+     object :: type-union(<method-object>, <domain-object>), #key)
  => (result :: <table>);
   let information = next-method();
-  let identifier = object-identifier(project, method*);
+  let identifier = object-identifier(project, object);
   unless (element($ids, identifier, default: #f))
     // save id for identifier
-    $ids[identifier] := environment-object-id(project, method*);
+    $ids[identifier] := environment-object-id(project, object);
   end;
   information[identifier:] := identifier;
   information;
