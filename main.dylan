@@ -277,7 +277,7 @@ define function find-object (project, library, module, identifier :: <string>)
                           module: module);
 end function;
 
-define function source (#key identifiers)
+define function find-project/object (identifiers)
   let library-name = identifiers[0];
   let module-name = when (identifiers.size > 1)
                       identifiers[1];
@@ -292,6 +292,11 @@ define function source (#key identifiers)
                else
                  module | library
                end if;
+  values(project, object);
+end function;
+
+define function source (#key identifiers)
+  let (project, object) = find-project/object(identifiers);
   let location =
     environment-object-source-location(project, object);
   let (start-line, end-line) =
@@ -400,10 +405,8 @@ define function clients (#key library-name, module-name, identifier)
               source-form-clients(project, object)));
 end function;
 
-define function info (#key library-name, module-name, identifier)
-  let (project, library, module) =
-    find-library/module(library-name, module-name);
-  let object = find-object(project, library, module, identifier);
+define function info (#key identifiers)
+  let (project, object) = find-project/object(identifiers);
   object-information(project, object);
 end function;
 
@@ -525,7 +528,7 @@ define function start ()
   add("/api/source/{identifiers+}",
       source);
 
-  add("/api/info/{library-name}/{module-name}/{identifier}",
+  add("/api/info/{identifiers+}",
       info);
 
   add("/api/macroexpansion/{library-name}/{module-name}",
