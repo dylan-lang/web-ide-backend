@@ -22,15 +22,15 @@ define function open-project-database (project :: <project-object>)
   open-project-compiler-database(project,
                                  warning-callback: callback-handler,
                                  error-handler: callback-handler);
-  with-lock($parse-lock)
+  with-lock ($parse-lock)
     parse-project-source(project);
   end;
 end function;
 
-define variable *libraries* = #f;
+define variable *projects* = #f;
 
-define function library-names ()
-  unless (*libraries*)
+define function all-projects ()
+  unless (*projects*)
     let names = make(<deque>);
     local method collect-project
               (dir :: <pathname>, name :: <string>, type :: <file-type>)
@@ -45,10 +45,14 @@ define function library-names ()
         do-directory(collect-project, path);
       end;
     end for;
-    *libraries* := remove-duplicates!(names, test: \=);
+    *projects* := remove-duplicates!(names, test: \=);
   end unless;
+  *projects*
+end function;
+
+define function library-names ()
   table(parents: => #(),
-        objects: => *libraries*);
+        objects: => all-projects());
 end function;
 
 define function find-library/module (library-name, module-name)
@@ -422,6 +426,18 @@ define function macroexpansion (#key library-name, module-name)
   table("macroexpansion" => stream-contents(stream));
 end function;
 
+define function search (#key term)
+  let symbol-entries = element($symbols, term, default: #());
+  table(parents: => #f,
+        objects: =>
+          map(method (symbol-entry)
+                let project = symbol-entry.symbol-entry-project;
+                let name = symbol-entry.symbol-entry-name;
+                object-information(project, name-value(project, name));
+              end method,
+              symbol-entries));
+end function;
+
 // TODO:
 // define function configuration ()
 //   table("" => "library",
@@ -464,6 +480,48 @@ define function filtered (function)
     end if;
     result;
   end method;
+end function;
+
+define class <symbol-entry> (<object>)
+  constant slot symbol-entry-name,
+    required-init-keyword: name:;
+  constant slot symbol-entry-project,
+    required-init-keyword: project:;
+end class;
+
+define constant $symbols = make(<string-table>);
+
+define function add-symbol (project, name-object :: <binding-name-object>)
+  if (name-exported?(project, name-object))
+    let symbol-entry = make(<symbol-entry>,
+                            name: name-object,
+                            project: project);
+    let symbol-name =
+      get-environment-object-primitive-name(project, name-object);
+    let symbol-entries = element($symbols, symbol-name,
+                                 default: make(<stretchy-vector>));
+    $symbols[symbol-name] := add!(symbol-entries, symbol-entry);
+  end if;
+end function;
+
+define function populate-symbol-table ()
+  let projects = all-projects();
+  // TODO: include more
+  for (project-name in #("dylan"))
+    block()
+      let (project, library) = find-library/module(project-name, #f);
+      do-namespace-names(method(module-name :: <module-name-object>)
+                             if (name-exported?(project, module-name))
+                               let name = name-value(project, module-name);
+                               do-namespace-names(curry(add-symbol, project),
+                                                  project, name);
+                             end if
+                         end method,
+                         project, project.project-library);
+    exception (e :: <condition>)
+      log-debug("Received exception %= in project %s\n", e, project-name);
+    end block;
+  end for;
 end function;
 
 define function start ()
@@ -527,17 +585,16 @@ define function start ()
 
   add("/api/source/{identifiers+}",
       source);
-
   add("/api/info/{identifiers+}",
       info);
-
   add("/api/macroexpansion/{library-name}/{module-name}",
       macroexpansion);
 
+  add("/api/search/{term}", search);
   // TODO:
   // add("/configuration", configuration);
-  // /search/{types+}/{term} => [{module: 'common-dylan'}, ...]
 
+  make(<thread>, function: populate-symbol-table);
   start-server(server);
 end function;
 
