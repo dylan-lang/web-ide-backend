@@ -301,47 +301,47 @@ define function source (#key identifiers)
     environment-object-source-location(project, object);
   let (start-line, end-line) =
     object-source-location-lines(location);
-  let filename =
-    source-line-location(location.source-location-source-record, 0);
-  let start-line =
+  let source-record = location.source-location-source-record;
+  let offset = source-record.source-record-start-line;
+  let start-line = offset +
     location.source-location-start-line;
-  let end-line =
+  let end-line = offset +
     location.source-location-end-line;
   select (current-request().request-method)
     #"GET" =>
-      table(filename: => filename,
+      table(filename: => locator-name(source-record.source-record-location),
             line: => start-line,
             column: => location.source-location-start-column,
             end-line: => end-line,
             source: => environment-object-source(project, object));
-    /* TODO
     #"POST" =>
       begin
+        let path = as(<string>, source-record.source-record-location);
         let new-source = get-query-value("value");
-        let old-source = with-open-file (file = filename, direction: #"input")
+        let old-source = with-open-file (file = path, direction: #"input")
                            stream-contents(file);
                          end;
-        with-open-file (file = filename, direction: #"output", if-exists: #"replace")
+        with-open-file (file = path, direction: #"output", if-exists: #"replace")
           let stream = make(<string-stream>, direction: #"input",
                             contents: old-source);
-          // TODO: stream.stream-position := 0;
           // copy up to start of old source
-          for (line from 0 below start-line)
+          for (line from 1 below start-line)
             write-line(file, read-line(stream));
           end for;
           // skip old source
-          for (line from start-line below end-line)
+          for (line from start-line to end-line)
             read-line(stream);
           end for;
           // write new source
           write(file, new-source);
+          new-line(file);
           // copy up to end of file
           until (stream-at-end?(stream))
             write-line(file, read-line(stream));
           end until;
         end with-open-file;
+        #t;
       end begin;
-    */
     otherwise => #f;
   end select;
 end function;

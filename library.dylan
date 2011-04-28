@@ -18,6 +18,7 @@ define module web-ide-backend
   use common-dylan, 
     exclude: { direct-superclasses, all-superclasses, direct-subclasses };
   use threads;
+  use locators;
   use standard-io;
   use file-system;
   use print;
