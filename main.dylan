@@ -225,7 +225,8 @@ end function;
 // TODO: not supported by environment API
 // define function all-subclasses (#key library-name, module-name, class-name)
 
-define function direct-methods (#key library-name, module-name, class-name)
+define function direct-methods
+    (#key library-name, module-name, class-name)
  => (result :: <table>);
   let (project, library, module) =
     find-library/module(library-name, module-name);
@@ -234,14 +235,16 @@ define function direct-methods (#key library-name, module-name, class-name)
                                       module: module);
   let methods = make(<deque>);
   do-direct-methods(method (method*)
-                      push(methods, object-information(project, method*));
+                      push(methods,
+                           object-information(project, method*));
                     end method,
                     project, class);
   table(parents: => #f,
         objects: => methods);
 end function;
 
-define function all-methods (#key library-name, module-name, class-name)
+define function all-methods
+    (#key library-name, module-name, class-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
   let class = find-environment-object(project, class-name,
@@ -249,23 +252,28 @@ define function all-methods (#key library-name, module-name, class-name)
                                       module: module);
   let methods = make(<deque>);
   do-all-methods(method (method-class, method*)
-                   push(methods, object-information(project, method*));
+                   push(methods,
+                        object-information(project, method*));
                  end method,
                  project, class);
   table(parents: => #f,
         objects: => methods);
 end function;
 
-define function methods (#key library-name, module-name, generic-function-name)
+define function methods
+    (#key library-name, module-name, generic-function-name)
   let (project, library, module) =
     find-library/module(library-name, module-name);
-  let generic-function = find-environment-object(project, generic-function-name,
-                                                 library: library,
-                                                 module: module);
+  let generic-function =
+    find-environment-object(project, generic-function-name,
+                            library: library,
+                            module: module);
   if (generic-function)
     let methods = make(<deque>);
     do-generic-function-methods(method (method*)
-                                  push(methods, object-information(project, method*));
+                                  push(methods,
+                                       object-information(project,
+                                                          method*));
                                 end method,
                                 project, generic-function);
     table(parents: => #f,
@@ -273,7 +281,8 @@ define function methods (#key library-name, module-name, generic-function-name)
   end if;
 end function;
 
-define function find-object (project, library, module, identifier :: <string>)
+define function find-object
+    (project, library, module, identifier :: <string>)
  => (result :: false-or(<environment-object>));
   let id = element($ids, identifier, default: #f);
   find-environment-object(project, id | identifier,
@@ -281,22 +290,40 @@ define function find-object (project, library, module, identifier :: <string>)
                           module: module);
 end function;
 
+define method find-library-object
+    (type == #"warning", project, library, identifier :: <string>)
+ => (result :: false-or(<environment-object>));
+  let index = string-to-integer(split(identifier, ";")[2]);
+  element(project-warnings(project), index, default: #f);
+end method;
+
 define function find-project/object (identifiers)
   let library-name = identifiers[0];
-  let module-name = when (identifiers.size > 1)
-                      identifiers[1];
-                    end;
+  let second = when (identifiers.size > 1)
+                 identifiers[1];
+               end;
   let identifier = when (identifiers.size > 2)
                      identifiers[2];
                    end;
-  let (project, library, module) =
-    find-library/module(library-name, module-name);
-  let object = if (identifier)
-                 find-object(project, library, module, identifier);
-               else
-                 module | library
+  // special object of project?
+  if (second & second[0] = ';')
+    let (project, library) =
+      find-library/module(library-name, #f);
+    let type = as(<symbol>, split(second, ";")[1]);
+    let object =
+      find-library-object(type, project, library, second);
+    values(project, object);
+  else
+    let (project, library, module) =
+      find-library/module(library-name, second);
+    let object = if (identifier)
+                   find-object(project, library, module,
+                               identifier);
+                 else
+                   module | library
                end if;
-  values(project, object);
+    values(project, object);
+  end if;
 end function;
 
 define function source (#key identifiers)
@@ -361,24 +388,28 @@ define function build (#key library-name)
   let (project, library) = find-library/module(library-name, #f);
   with-lock ($build-lock)
     *build-project* := project;
-    table(built?: =>
-            build-project(project,
-                          progress-callback:
-                            method (numerator, denominator, #rest foo)
-                              *build-progress* :=
-                                as(<float>, numerator) / as(<float>, denominator);
-                              log-debug("build progress: %s", *build-progress*);
-                            end method,
-                          error-handler:
-                            method (#rest args)
-                              // TODO: save and serve in build-progress
-                              log-debug("build error: %=", args);
-                            end method,
-                          clean?: #f,
-                          link?: #f,
-                          save-databases?: #t,
-                          copy-sources?: #f,
-                          process-subprojects?: #t));
+    let built? =
+      build-project(project,
+                    progress-callback:
+                      method (numerator, denominator, #rest foo)
+                        *build-progress* :=
+                          as(<float>, numerator) / as(<float>, denominator);
+                        log-debug("build progress: %s", *build-progress*);
+                      end method,
+                    error-handler:
+                      method (#rest args)
+                        // TODO: save and serve in build-progress
+                        log-debug("build error: %=", args);
+                      end method,
+                    clean?: #f,
+                    link?: #f,
+                    save-databases?: #t,
+                    copy-sources?: #f,
+                    process-subprojects?: #t);
+    let notes = map(curry(object-information, project),
+                    project-warnings(project));
+    table(built?: => built?,
+          notes: => notes);
   end with-lock;
 end function;
 

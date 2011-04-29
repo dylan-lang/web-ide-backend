@@ -1,84 +1,119 @@
 module: web-ide-backend
 
-define generic object-type (object :: <object>)
+define generic object-type
+    (object :: <object>)
  => (name :: <string>);
 
-define method object-type (object :: <object>)
+define method object-type
+    (object :: <object>)
  => (name :: <string>);
   "other"
 end method;
 
-define method object-type (object :: <library-object>)
+define method object-type
+    (object :: <library-object>)
  => (name :: <string>);
  "library"
 end;
 
-define method object-type (object :: <module-object>)
+define method object-type
+    (object :: <module-object>)
  => (name :: <string>);
  "module"
 end;
 
-define method object-type (object :: <class-object>)
+define method object-type
+    (object :: <class-object>)
  => (name :: <string>);
   "class"
 end;
 
-define method object-type (object :: <function-object>)
+define method object-type
+    (object :: <function-object>)
  => (name :: <string>);
   "function"
 end;
 
-define method object-type (object :: <generic-function-object>)
+define method object-type
+    (object :: <generic-function-object>)
  => (name :: <string>);
   "generic-function"
 end;
 
-define method object-type (object :: <method-object>)
+define method object-type
+    (object :: <method-object>)
  => (name :: <string>);
   "method"
 end;
 
-define method object-type (object :: <variable-object>)
+define method object-type
+    (object :: <variable-object>)
  => (name :: <string>);
   "variable"
 end;
 
-define method object-type (object :: <global-variable-object>)
+define method object-type
+    (object :: <global-variable-object>)
  => (name :: <string>);
   "global-variable"
 end;
 
-define method object-type (object :: <thread-variable-object>)
+define method object-type
+    (object :: <thread-variable-object>)
  => (name :: <string>);
   "thread-variable"
 end;
 
-define method object-type (object :: <constant-object>)
+define method object-type
+    (object :: <constant-object>)
  => (name :: <string>);
   "constant"
 end;
 
-define method object-type (object :: <slot-object>)
+define method object-type
+    (object :: <slot-object>)
  => (name :: <string>);
   "slot"
 end;
 
-define method object-type (object :: <macro-object>)
+define method object-type
+    (object :: <macro-object>)
  => (name :: <string>);
   "macro"
 end;
 
-define method object-type (object :: <domain-object>)
+define method object-type
+    (object :: <domain-object>)
  => (name :: <string>);
   "domain"
 end;
 
-define method object-type (object :: <complex-type-expression-object>)
+define method object-type
+    (object :: <complex-type-expression-object>)
  => (name :: <string>);
   "complex-type-expression"
 end method;
 
-define method object-type (object :: <parameter>)
+define method object-type
+    (object :: <parameter>)
  => (name :: <string>);
   "parameter"
+end method;
+
+define method object-type
+    (object :: <warning-object>)
+ => (name :: <string>);
+  "warning"
+end method;
+
+define method object-type
+    (object :: <serious-compiler-warning-object>)
+ => (name :: <string>);
+  "serious-warning"
+end method;
+
+define method object-type
+    (object :: <compiler-error-object>)
+ => (name :: <string>);
+  "error"
 end method;

@@ -102,3 +102,15 @@ define method object-details
   table(definitions: =>
           size(module-definitions(project, module, imported?: #f)));
 end method;
+
+define method object-details
+    (project :: <project-object>, warning :: <warning-object>)
+ => (result :: false-or(<table>));
+  let owner = warning-owner(project, warning);
+  table(object: =>
+          owner & object-information(project, owner),
+        long-description: =>
+          compiler-warning-full-message(project, warning),
+        short-description: =>
+          compiler-warning-short-message(project, warning));
+end method;

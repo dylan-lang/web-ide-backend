@@ -6,11 +6,13 @@ define generic object-information
 
 define method object-information
     (project :: <project-object>, object :: <object>,
-     #key details? = #t, parents? = #t)
+     #key name? = #t, details? = #t, parents? = #t)
  => (result :: <table>);
   let information =
-    table(name: => object-name(project, object),
-          type: => object-type(object));
+    table(type: => object-type(object));
+  when (name?)
+    information[name:] := object-name(project, object);
+  end;
   when (parents?)
     information[parents:] := object-parents(project, object);
   end;
@@ -51,6 +53,15 @@ define method object-identifier
 end method;
 
 define method object-identifier
+    (project :: <project-object>, warning :: <warning-object>)
+ => (identifier :: <string>);
+  // TODO: <warning-object>s don't have proper IDs :/
+  concatenate(";warning;",
+              integer-to-string(find-key(project-warnings(project),
+                                         curry(\=, warning))));
+end method;
+
+define method object-identifier
     (project :: <project-object>, method* :: <method-object>)
  => (identifier :: <string>);
   let method-id = environment-object-id(project, method*);
@@ -72,15 +83,30 @@ end method;
 
 define method object-information
     (project :: <project-object>,
-     object :: type-union(<method-object>, <domain-object>), #key)
+     object :: type-union(<method-object>,
+                          <domain-object>),
+     #key)
  => (result :: <table>);
   let information = next-method();
   let identifier = object-identifier(project, object);
   unless (element($ids, identifier, default: #f))
     // save id for identifier
-    $ids[identifier] := environment-object-id(project, object);
+    $ids[identifier] :=
+      environment-object-id(project, object);
   end;
   information[identifier:] := identifier;
+  information;
+end method;
+
+define method object-information
+    (project :: <project-object>,
+     object :: <warning-object>, #key)
+ => (result :: <table>);
+  let information = next-method();
+  information[identifier:] :=
+    object-identifier(project, object);
+  information[parents:] :=
+    vector(object-information(project, project.project-library));
   information;
 end method;
 
@@ -89,6 +115,7 @@ define method object-information
  => (result :: <table>);
   let getter = slot-getter(project, slot);
   let information = next-method();
+  // overwrite with getter's info
   information[name:] := object-name(project, getter);
   information[parents:] := object-parents(project, getter);
   information;
