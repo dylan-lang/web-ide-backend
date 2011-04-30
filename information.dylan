@@ -107,6 +107,8 @@ define method object-information
     object-identifier(project, object);
   information[parents:] :=
     vector(object-information(project, project.project-library));
+  information[has-source?:] :=
+    environment-object-source-location(project, object) & #t;
   information;
 end method;
 
