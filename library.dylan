@@ -16,7 +16,9 @@ end;
 
 define module web-ide-backend
   use common-dylan, 
-    exclude: { direct-superclasses, all-superclasses, direct-subclasses };
+    exclude: { direct-superclasses,
+               all-superclasses, 
+               direct-subclasses };
   use threads;
   use locators;
   use standard-io;
@@ -26,13 +28,11 @@ define module web-ide-backend
   use streams;
   use table-extensions;
   use operating-system,
-    rename: { load-library => os/load-library };
+    exclude: { load-library,
+               run-application  };
   use registry-projects;
   use environment-commands;
-  use environment-protocols,
-    exclude: { application-filename,
-	       application-arguments,
-	       run-application };
+  use environment-protocols;
   use source-records;
   use source-records-implementation;
   use koala;

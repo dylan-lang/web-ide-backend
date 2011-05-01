@@ -422,25 +422,59 @@ define function build-progress ()
   end if;
 end function;
 
+define function run (#key library-name)
+  let (project, library) = find-library/module(library-name, #f);
+  let startup-option = project.application-startup-option;
+  let machine = project.project-debug-machine
+    | environment-host-machine();
+  let application =
+    run-application(project, machine: machine,
+                    startup-option: startup-option);
+end function;
+
+define variable *link-progress* = 0;
+
+define variable *link-project* = #f;
+
+define constant $link-lock = make(<lock>);
+
+define function link (#key library-name)
+  let (project, library) = find-library/module(library-name, #f);
+  with-lock ($link-lock)
+    *link-project* := project;
+    link-project(project,
+                 progress-callback:
+                   method (numerator, denominator, #rest foo)
+                     *link-progress* :=
+                       as(<float>, numerator) / as(<float>, denominator);
+                     log-debug("link progress: %s", *link-progress*);
+                   end method,
+                 error-handler:
+                   method (#rest args)
+                     // TODO: save and serve in link-progress
+                     log-debug("link error: %=", args);
+                   end method,
+                 process-subprojects?: #t,
+                 release?: #f);
+  end with-lock;
+end function;
+
+define function link-progress ()
+  if (*link-project*)
+    table(object: =>
+            object-information(*link-project*,
+                               *link-project*.project-library),
+          progress: => *link-progress*);
+  end if;
+end function;
+
 /* TODO:
   from env/tools/proj-commands:
 
+  update-application(project, progress-callback: progress) // ???
 
- link-project(project,
-              progress-callback:    progress-handler,
-              error-handler:        condition-handler,
-              process-subprojects?: process-subprojects?,
-              release?:             release?);
-
-
-  let startup-option = project.application-startup-option;
-  let machine = project.project-debug-machine
-      | environment-host-machine();
-  run-application(project, machine: machine,
-                  startup-option: startup-option)
   stop-application(project) // PAUSE
   continue-application(project);
-  update-application(project, progress-callback: progress) // ???
   close-application(project, wait-for-termination?: #t) // STOP
 
 */
@@ -563,7 +597,7 @@ end function;
 define function populate-symbol-table ()
   let projects = all-projects();
   // TODO: include more
-  for (project-name in #("dylan"))
+  for (project-name in #("dylan", "web-ide-backend"))
     block()
       let (project, library) = find-library/module(project-name, #f);
       do-namespace-names(method(module-name :: <module-name-object>)
@@ -650,6 +684,9 @@ define function start ()
 
   add("/api/build/{library-name}", build);
   add("/api/build-progress", build-progress);
+
+  add("/api/link/{library-name}", link);
+  add("/api/link-progress", link-progress);
 
   // TODO:
   // add("/configuration", configuration);
