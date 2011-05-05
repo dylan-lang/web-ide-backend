@@ -100,15 +100,22 @@ end method;
 
 define method object-information
     (project :: <project-object>,
-     object :: <warning-object>, #key)
+     warning :: <warning-object>, #key)
  => (result :: <table>);
   let information = next-method();
   information[identifier:] :=
-    object-identifier(project, object);
+    object-identifier(project, warning);
+  let library-information =
+    object-information(project, project.project-library);
+  let owner = warning-owner(project, warning);
   information[parents:] :=
-    vector(object-information(project, project.project-library));
+    if (owner)
+      object-parents(project, owner);
+    else
+      vector(library-information);
+    end if;
   information[has-source?:] :=
-    environment-object-source-location(project, object) & #t;
+    environment-object-source-location(project, warning) & #t;
   information;
 end method;
 
