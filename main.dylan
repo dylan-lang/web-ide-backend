@@ -517,7 +517,22 @@ define function macroexpansion (#key library-name, module-name)
 end function;
 
 define function search (#key term)
-  let symbol-entries = element($symbols, term, default: #());
+  // find matching keys
+  let symbol-names =
+    choose(method (name)
+             copy-sequence(name, end: min(size(name),
+                                          size(term)))
+               = term
+           end method,
+           key-sequence($symbols));
+  // gather symbol entries
+  let symbol-entries = make(<deque>);
+  for (symbol-name in symbol-names)
+    for (symbol-entry in element($symbols, symbol-name))
+      symbol-entries := add-new!(symbol-entries, symbol-entry);
+    end for;
+  end for;
+  // return result
   table(parents: => #f,
         objects: =>
           map(method (symbol-entry)
