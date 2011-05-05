@@ -290,39 +290,51 @@ define function find-object
                           module: module);
 end function;
 
-define method find-library-object
-    (type == #"warning", project, library, identifier :: <string>)
+define method find-special-object
+    (type == #"warning", project, library, module, identifier :: <string>)
  => (result :: false-or(<environment-object>));
   let index = string-to-integer(split(identifier, ";")[2]);
   element(project-warnings(project), index, default: #f);
 end method;
 
+define function special-identifier?
+    (identifier :: <string>)
+ => (special? :: <boolean>);
+  identifier[0] = ';'
+end function;
+
+define function identifier-type
+    (identifier :: <string>)
+ => (type :: <symbol>);
+  as(<symbol>, split(identifier, ";")[1]);
+end function;
+
 define function find-project/object (identifiers)
   let library-name = identifiers[0];
-  let second = when (identifiers.size > 1)
-                 identifiers[1];
-               end;
-  let identifier = when (identifiers.size > 2)
-                     identifiers[2];
-                   end;
-  // special object of project?
-  if (second & second[0] = ';')
-    let (project, library) =
-      find-library/module(library-name, #f);
-    let type = as(<symbol>, split(second, ";")[1]);
-    let object =
-      find-library-object(type, project, library, second);
-    values(project, object);
-  else
+  if (identifiers.size > 1)
+    let (module-name, identifier) =
+      if (identifiers.size = 3)
+        values(identifiers[1], identifiers[2]);
+      else
+        values(#f, identifiers[1]);
+      end if;
     let (project, library, module) =
-      find-library/module(library-name, second);
-    let object = if (identifier)
-                   find-object(project, library, module,
-                               identifier);
-                 else
-                   module | library
-               end if;
-    values(project, object);
+      find-library/module(library-name, module-name);
+    if (special-identifier?(identifier))
+      let object =
+        find-special-object(identifier-type(identifier), project,
+                            library, module, identifier);
+      values(project, object);
+    else
+      values(project, if (identifiers.size = 3)
+                        find-object(project, library, module, identifier);
+                      else
+                        module
+                      end if);
+    end if;
+  else
+    // library
+    find-library/module(library-name, #f);
   end if;
 end function;
 
