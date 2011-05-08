@@ -6,6 +6,8 @@ define library web-ide-backend
   use io;
   use collections;
   use registry-projects;
+  use dfmc-environment;
+  use dfmc-environment-application;
   use environment-commands;
   use environment-protocols;
   use source-records;
@@ -15,9 +17,9 @@ define library web-ide-backend
 end;
 
 define module web-ide-backend
-  use common-dylan, 
+  use common-dylan,
     exclude: { direct-superclasses,
-               all-superclasses, 
+               all-superclasses,
                direct-subclasses };
   use threads;
   use locators;
@@ -31,6 +33,8 @@ define module web-ide-backend
     exclude: { load-library,
                run-application  };
   use registry-projects;
+  use dfmc-environment;
+  use dfmc-application;
   use environment-commands;
   use environment-protocols;
   use source-records;

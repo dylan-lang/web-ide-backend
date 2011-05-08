@@ -435,13 +435,26 @@ define function build-progress ()
 end function;
 
 define function run (#key library-name)
-  let (project, library) = find-library/module(library-name, #f);
+  let (project, library) =
+    find-library/module(library-name, #f);
   let startup-option = project.application-startup-option;
-  let machine = project.project-debug-machine
-    | environment-host-machine();
+  let machine = project.project-debug-machine |
+    environment-host-machine();
   let application =
     run-application(project, machine: machine,
                     startup-option: startup-option);
+  table(state: => application.application-state);
+end function;
+
+define function run-state (#key library-name)
+  let (project, library) =
+    find-library/module(library-name, #f);
+  let application = project.project-application;
+  table(state: => if (application)
+                    application.application-state
+                  else
+                    #"uninitialized"
+                  end if);
 end function;
 
 define variable *link-progress* = 0;
@@ -715,10 +728,13 @@ define function start ()
   add("/api/link/{library-name}", link);
   add("/api/link-progress", link-progress);
 
+  add("/api/run/{library-name}", run);
+  add("/api/run-state/{library-name}", run-state);
+
   // TODO:
   // add("/configuration", configuration);
 
-  make(<thread>, function: populate-symbol-table);
+  // make(<thread>, function: populate-symbol-table);
   start-server(server);
 end function;
 
