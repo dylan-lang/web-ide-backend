@@ -457,6 +457,13 @@ define function run-state (#key library-name)
                   end if);
 end function;
 
+define function stop (#key library-name)
+  let (project, library) =
+    find-library/module(library-name, #f);
+  close-application(project, wait-for-termination?: #t); 
+  table(state: => #"stopped"); 
+end function;
+
 define variable *link-progress* = 0;
 
 define variable *link-project* = #f;
@@ -500,8 +507,6 @@ end function;
 
   stop-application(project) // PAUSE
   continue-application(project);
-  close-application(project, wait-for-termination?: #t) // STOP
-
 */
 
 define function used-definitions (#key library-name, module-name, identifier)
@@ -730,6 +735,7 @@ define function start ()
 
   add("/api/run/{library-name}", run);
   add("/api/run-state/{library-name}", run-state);
+  add("/api/stop/{library-name}", stop);
 
   // TODO:
   // add("/configuration", configuration);
