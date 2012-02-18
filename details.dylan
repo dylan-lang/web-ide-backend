@@ -1,4 +1,8 @@
 module: web-ide-backend
+Copyright:    Original Code is Copyright (c) 2011 Dylan Hackers
+              All rights reserved.
+License:      See License.txt in this distribution for details.
+
 
 define generic object-details
     (project :: <project-object>, object :: <object>)
