@@ -586,6 +586,7 @@ end function;
 
 define function json-handler (function)
   method (#rest arguments)
+    set-header(current-response(), "Content-Type", "application/json");
     encode-json(current-response(),
                 apply(function, arguments));
   end method;
